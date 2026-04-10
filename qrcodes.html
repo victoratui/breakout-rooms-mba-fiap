@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QR Codes — Breakout Rooms</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#e6edf3;min-height:100vh;padding:20px}
+.header{text-align:center;padding:20px 0;margin-bottom:24px}
+.header h1{font-size:1.6em;color:#58a6ff}
+.header p{color:#8b949e;margin-top:8px}
+.controls{text-align:center;margin-bottom:24px}
+.controls select,.controls button{padding:10px 20px;border-radius:8px;border:1px solid #30363d;background:#21262d;color:#e6edf3;font-size:1em;cursor:pointer;margin:0 4px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:900px;margin:0 auto}
+@media(max-width:700px){.grid{grid-template-columns:1fr}}
+.qr-card{background:#161b22;border:2px solid #30363d;border-radius:16px;padding:24px;text-align:center}
+.qr-card.alfa{border-color:#2ECC71}
+.qr-card.beta{border-color:#64B5F6}
+.qr-card.gamma{border-color:#CE93D8}
+.qr-card.delta{border-color:#FF8A65}
+.qr-card h2{font-size:1.3em;margin-bottom:4px;letter-spacing:2px}
+.qr-card.alfa h2{color:#2ECC71}
+.qr-card.beta h2{color:#64B5F6}
+.qr-card.gamma h2{color:#CE93D8}
+.qr-card.delta h2{color:#FF8A65}
+.qr-card .url{color:#484f58;font-size:0.7em;margin:8px 0;word-break:break-all;max-height:40px;overflow:hidden}
+.qr-card .qr-img{width:240px;height:240px;margin:12px auto;display:block;border-radius:8px;background:#0d1117}
+.qr-card .hint{color:#8b949e;font-size:0.85em;margin-top:8px}
+.qr-card .loading{color:#484f58;font-style:italic;padding:60px 0}
+.print-hint{text-align:center;color:#8b949e;margin-top:24px;font-size:0.85em}
+.print-hint button{padding:10px 24px;background:#1f6feb;color:#fff;border:none;border-radius:8px;font-size:1em;cursor:pointer;margin:8px 4px}
+.print-hint button.green{background:#238636}
+@media print{body{background:#fff;color:#000}.header h1{color:#000}.qr-card{border:2px solid #333;page-break-inside:avoid}.qr-card h2{color:#333!important}.controls,.print-hint{display:none}.qr-card .url{color:#666}.qr-card .qr-img{filter:none}}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>📱 QR Codes — Breakout Rooms</h1>
+  <p>Compartilhe estes QR Codes no chat do Teams para os alunos acessarem</p>
+</div>
+
+<div class="controls">
+  <select id="sel-aula" onchange="generateQRs()">
+    <option value="1">Aula 1 — O Chamado</option>
+    <option value="2">Aula 2 — O Desenvolvimento</option>
+    <option value="3">Aula 3 — A Transformação</option>
+    <option value="4">Aula 4 — O Legado</option>
+  </select>
+  <select id="sel-bloco" onchange="generateQRs()">
+    <option value="1">Bloco 1</option>
+    <option value="2">Bloco 2</option>
+    <option value="3">Bloco 3</option>
+    <option value="4">Bloco 4</option>
+  </select>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<div class="print-hint">
+  <p>💡 Clique com botão direito na imagem do QR → "Copiar imagem" → Cole no chat do Teams</p>
+  <button onclick="window.print()">🖨️ Imprimir QR Codes</button>
+  <button class="green" onclick="copyAllToClipboard()">📋 Copiar URLs</button>
+</div>
+
+<script>
+const grupos = [
+  { id: "alfa", label: "GRUPO ALFA", cls: "alfa", color: "%232ECC71" },
+  { id: "beta", label: "GRUPO BETA", cls: "beta", color: "%2364B5F6" },
+  { id: "gamma", label: "GRUPO GAMMA", cls: "gamma", color: "%23CE93D8" },
+  { id: "delta", label: "GRUPO DELTA", cls: "delta", color: "%23FF8A65" },
+];
+
+const API = location.origin;
+let currentUrls = {};
+
+function generateQRs() {
+  const aula = document.getElementById("sel-aula").value;
+  const bloco = document.getElementById("sel-bloco").value;
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+  currentUrls = {};
+
+  grupos.forEach(g => {
+    const alunoUrl = `${API}/aluno.html?aula=${aula}&grupo=${g.id}#bloco${bloco}`;
+    currentUrls[g.id] = alunoUrl;
+    const encodedUrl = encodeURIComponent(alunoUrl);
+    const qrSrc = `${API}/api/qr?text=${encodedUrl}&color=${g.color}`;
+
+    const card = document.createElement("div");
+    card.className = `qr-card ${g.cls}`;
+    card.innerHTML = `
+      <h2>${g.label}</h2>
+      <div class="url">${alunoUrl}</div>
+      <img class="qr-img" src="${qrSrc}" alt="QR Code ${g.label}" onerror="this.parentElement.querySelector('.qr-img').outerHTML='<div class=loading>⚠️ Erro ao gerar QR. Use a URL acima.</div>'">
+      <div class="hint">📱 Escaneie para entrar no ${g.label}</div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function copyAllToClipboard() {
+  const aula = document.getElementById("sel-aula").value;
+  const bloco = document.getElementById("sel-bloco").value;
+  const text = grupos.map(g =>
+    `${g.label}: ${currentUrls[g.id]}`
+  ).join("\n");
+  const full = `🎯 Breakout Room — Aula ${aula}, Bloco ${bloco}\n\n${text}\n\n📱 Escaneie o QR Code ou clique no link do seu grupo!`;
+  navigator.clipboard.writeText(full).then(() => alert("URLs copiadas! Cole no chat do Teams.")).catch(() => {
+    // Fallback
+    const ta = document.createElement("textarea");
+    ta.value = full; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); document.body.removeChild(ta);
+    alert("URLs copiadas! Cole no chat do Teams.");
+  });
+}
+
+// Init from URL params
+const params = new URLSearchParams(location.search);
+if (params.get("aula")) document.getElementById("sel-aula").value = params.get("aula");
+if (params.get("bloco")) document.getElementById("sel-bloco").value = params.get("bloco");
+generateQRs();
+</script>
+</body>
+</html>

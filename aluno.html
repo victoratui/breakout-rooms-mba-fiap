@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Breakout Room — MBA FIAP 2026</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#e6edf3;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:16px}
+.container{max-width:600px;width:100%}
+.header{text-align:center;padding:20px 0;border-bottom:2px solid #30363d;margin-bottom:24px}
+.header h1{font-size:1.4em;color:#58a6ff}
+.header .grupo-badge{display:inline-block;padding:8px 24px;border-radius:20px;font-weight:700;font-size:1.1em;margin:12px 0;text-transform:uppercase;letter-spacing:2px}
+.grupo-alfa .grupo-badge{background:#1B4332;color:#2ECC71}
+.grupo-beta .grupo-badge{background:#1A237E;color:#64B5F6}
+.grupo-gamma .grupo-badge{background:#4A148C;color:#CE93D8}
+.grupo-delta .grupo-badge{background:#BF360C;color:#FF8A65}
+.header .bloco-info{color:#8b949e;font-size:0.9em;margin-top:8px}
+.challenge{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:20px;margin-bottom:24px}
+.challenge h2{color:#f0883e;font-size:1em;margin-bottom:12px}
+.challenge p{color:#c9d1d9;line-height:1.6;font-size:0.95em}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;color:#8b949e;font-size:0.85em;margin-bottom:6px}
+.form-group input,.form-group textarea{width:100%;padding:12px;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#e6edf3;font-size:1em;font-family:inherit}
+.form-group textarea{min-height:150px;resize:vertical}
+.form-group input:focus,.form-group textarea:focus{outline:none;border-color:#58a6ff}
+.btn-submit{width:100%;padding:14px;background:#238636;color:#fff;border:none;border-radius:8px;font-size:1.1em;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-submit:hover{background:#2ea043}
+.btn-submit:disabled{background:#21262d;color:#484f58;cursor:not-allowed}
+.success{text-align:center;padding:40px 20px;background:#161b22;border-radius:12px;border:1px solid #238636}
+.success h2{color:#2ea043;font-size:1.5em;margin-bottom:12px}
+.success p{color:#8b949e}
+.timer{text-align:center;background:#161b22;border:1px solid #30363d;border-radius:8px;padding:12px;margin-bottom:16px}
+.timer span{font-size:2em;font-weight:700;color:#f0883e;font-variant-numeric:tabular-nums}
+.responses{margin-top:24px}
+.responses h3{color:#58a6ff;margin-bottom:12px}
+.response-card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:12px;margin-bottom:8px}
+.response-card .name{color:#58a6ff;font-weight:600;font-size:0.85em}
+.response-card .text{color:#c9d1d9;margin-top:4px;font-size:0.9em;line-height:1.5}
+.response-card .time{color:#484f58;font-size:0.75em;margin-top:4px}
+.empty{text-align:center;color:#484f58;padding:20px;font-style:italic}
+.logo{font-size:0.8em;color:#484f58;text-align:center;margin-top:24px;padding:12px}
+</style>
+</head>
+<body>
+<div class="container" id="app"></div>
+<script src="breakout-data.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const aula = parseInt(params.get("aula")) || 1;
+const grupo = (params.get("grupo") || "alfa").toLowerCase();
+const grupoNames = { alfa: "GRUPO ALFA", beta: "GRUPO BETA", gamma: "GRUPO GAMMA", delta: "GRUPO DELTA" };
+const grupoColors = { alfa: "grupo-alfa", beta: "grupo-beta", gamma: "grupo-gamma", delta: "grupo-delta" };
+const API = location.origin;
+
+let currentBloco = 1;
+let submitted = false;
+
+function render() {
+  const aulaData = BREAKOUT_DATA[aula];
+  if (!aulaData) { document.getElementById("app").innerHTML = `<div class="header"><h1>Aula não encontrada</h1></div>`; return; }
+  const blocoData = aulaData.blocos[currentBloco];
+  if (!blocoData) { document.getElementById("app").innerHTML = `<div class="header"><h1>Bloco não encontrado</h1></div>`; return; }
+  const desafio = blocoData.grupos[grupo] || "Desafio não encontrado para este grupo.";
+
+  document.getElementById("app").innerHTML = `
+    <div class="header ${grupoColors[grupo]}">
+      <h1>MBA FIAP 2026 — Breakout Room</h1>
+      <div class="grupo-badge">${grupoNames[grupo]}</div>
+      <div class="bloco-info">${aulaData.titulo}<br>Bloco ${currentBloco} — ${blocoData.tema}</div>
+    </div>
+    <div class="timer">⏱️ Tempo restante: <span id="timer">08:00</span></div>
+    <div class="challenge">
+      <h2>🎯 Seu Desafio:</h2>
+      <p>${desafio}</p>
+    </div>
+    <div id="form-area">
+      <div class="form-group">
+        <label>Seu nome</label>
+        <input type="text" id="nome" placeholder="Ex: Maria Silva" autocomplete="name">
+      </div>
+      <div class="form-group">
+        <label>Resposta do grupo (colaborem!)</label>
+        <textarea id="resposta" placeholder="Escrevam a resposta do grupo aqui..."></textarea>
+      </div>
+      <button class="btn-submit" id="btn-submit" onclick="submitResponse()">📤 Enviar Resposta</button>
+    </div>
+    <div class="responses" id="responses">
+      <h3>Respostas do ${grupoNames[grupo]}:</h3>
+      <div id="response-list"><div class="empty">Nenhuma resposta ainda...</div></div>
+    </div>
+    <div class="logo">Prof. Victor Atui — MBA FIAP 2026 — LGEAD</div>
+  `;
+  startTimer(8 * 60);
+  loadResponses();
+  connectSSE();
+}
+
+function startTimer(seconds) {
+  let remaining = seconds;
+  const el = document.getElementById("timer");
+  const tick = () => {
+    if (remaining <= 0) { el.textContent = "00:00"; el.style.color = "#f85149"; return; }
+    const m = Math.floor(remaining / 60);
+    const s = remaining % 60;
+    el.textContent = `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+    if (remaining <= 60) el.style.color = "#f85149";
+    remaining--;
+    setTimeout(tick, 1000);
+  };
+  tick();
+}
+
+async function submitResponse() {
+  const nome = document.getElementById("nome").value.trim();
+  const resposta = document.getElementById("resposta").value.trim();
+  if (!nome || !resposta) { alert("Preencha seu nome e a resposta!"); return; }
+  const btn = document.getElementById("btn-submit");
+  btn.disabled = true; btn.textContent = "Enviando...";
+  try {
+    const res = await fetch(`${API}/api/submit`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ aula, bloco: currentBloco, grupo, nome, resposta })
+    });
+    if (res.ok) {
+      document.getElementById("form-area").innerHTML = `
+        <div class="success">
+          <h2>✅ Resposta Enviada!</h2>
+          <p>Obrigado, ${nome}! Sua contribuição foi registrada.<br>Aguarde o retorno do breakout room.</p>
+        </div>
+      `;
+    }
+  } catch(e) {
+    alert("Erro ao enviar. Tente novamente."); btn.disabled = false; btn.textContent = "📤 Enviar Resposta";
+  }
+}
+
+async function loadResponses() {
+  try {
+    const res = await fetch(`${API}/api/responses?aula=${aula}&bloco=${currentBloco}`);
+    const data = await res.json();
+    renderResponses(data[grupo] || []);
+  } catch(e) {}
+}
+
+function renderResponses(list) {
+  const el = document.getElementById("response-list");
+  if (!el) return;
+  if (list.length === 0) { el.innerHTML = `<div class="empty">Nenhuma resposta ainda...</div>`; return; }
+  el.innerHTML = list.map(r => `
+    <div class="response-card">
+      <div class="name">👤 ${r.nome}</div>
+      <div class="text">${r.resposta.replace(/\n/g,"<br>")}</div>
+      <div class="time">${new Date(r.ts).toLocaleTimeString("pt-BR")}</div>
+    </div>
+  `).join("");
+}
+
+function connectSSE() {
+  const es = new EventSource(`${API}/api/stream`);
+  es.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    if (data.type === "new_response" && data.aula == aula && data.bloco == currentBloco && data.grupo === grupo) {
+      loadResponses();
+    }
+    if (data.type === "reset" && data.aula == aula && data.bloco == currentBloco) {
+      currentBloco = parseInt(data.bloco);
+      submitted = false;
+      render();
+    }
+    if (data.type === "new_bloco" && data.aula == aula) {
+      currentBloco = parseInt(data.bloco);
+      submitted = false;
+      render();
+    }
+  };
+}
+
+// Listen for bloco changes via URL hash
+window.addEventListener("hashchange", () => {
+  const b = parseInt(location.hash.replace("#bloco",""));
+  if (b >= 1 && b <= 4) { currentBloco = b; submitted = false; render(); }
+});
+if (location.hash) {
+  const b = parseInt(location.hash.replace("#bloco",""));
+  if (b >= 1 && b <= 4) currentBloco = b;
+}
+
+render();
+</script>
+</body>
+</html>

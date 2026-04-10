@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MBA FIAP 2026 — Breakout Rooms</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#e6edf3;min-height:100vh;display:flex;justify-content:center;padding:40px 20px}
+.container{max-width:700px;width:100%}
+.header{text-align:center;padding:30px 0;border-bottom:2px solid #30363d;margin-bottom:32px}
+.header h1{font-size:2em;color:#58a6ff;margin-bottom:8px}
+.header h2{font-size:1em;color:#f0883e;font-weight:400}
+.header p{color:#8b949e;margin-top:12px;font-size:0.9em}
+.cards{display:flex;flex-direction:column;gap:16px}
+.card{display:block;background:#161b22;border:1px solid #30363d;border-radius:12px;padding:24px;text-decoration:none;color:inherit;transition:all .2s}
+.card:hover{border-color:#58a6ff;transform:translateY(-2px);box-shadow:0 4px 20px rgba(88,166,255,0.1)}
+.card h3{color:#58a6ff;font-size:1.2em;margin-bottom:8px}
+.card p{color:#8b949e;font-size:0.9em;line-height:1.5}
+.card .emoji{font-size:2em;margin-bottom:8px}
+.footer{text-align:center;margin-top:40px;padding:20px;border-top:1px solid #21262d;color:#484f58;font-size:0.85em}
+.footer a{color:#58a6ff;text-decoration:none}
+.instructions{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:20px;margin-top:24px}
+.instructions h3{color:#f0883e;margin-bottom:12px}
+.instructions ol{padding-left:20px;color:#c9d1d9;line-height:1.8}
+.instructions code{background:#21262d;padding:2px 8px;border-radius:4px;font-size:0.9em;color:#58a6ff}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>🎓 MBA FIAP 2026</h1>
+    <h2>Liderança e Gestão de Equipes de Alto Desempenho</h2>
+    <p>Prof. Victor Atui — Breakout Rooms Interativos</p>
+  </div>
+
+  <div class="cards">
+    <a class="card" href="professor.html">
+      <div class="emoji">📊</div>
+      <h3>Painel do Professor</h3>
+      <p>Veja todas as respostas dos 4 grupos em tempo real. Controle blocos, resete salas e acompanhe o progresso.</p>
+    </a>
+    <a class="card" href="qrcodes.html?aula=1">
+      <div class="emoji">📱</div>
+      <h3>QR Codes — Aula 1</h3>
+      <p>Gere e compartilhe os QR Codes para os 4 grupos acessarem o breakout room.</p>
+    </a>
+    <a class="card" href="qrcodes.html?aula=2">
+      <div class="emoji">📱</div>
+      <h3>QR Codes — Aula 2</h3>
+      <p>QR Codes para os breakout rooms da Aula 2.</p>
+    </a>
+    <a class="card" href="qrcodes.html?aula=3">
+      <div class="emoji">📱</div>
+      <h3>QR Codes — Aula 3</h3>
+      <p>QR Codes para os breakout rooms da Aula 3.</p>
+    </a>
+    <a class="card" href="qrcodes.html?aula=4">
+      <div class="emoji">📱</div>
+      <h3>QR Codes — Aula 4</h3>
+      <p>QR Codes para os breakout rooms da Aula 4.</p>
+    </a>
+  </div>
+
+  <div class="instructions">
+    <h3>📋 Como Usar</h3>
+    <ol>
+      <li>Inicie o servidor: <code>node server.js</code> na pasta do site</li>
+      <li>Abra o <strong>Painel do Professor</strong> no seu computador</li>
+      <li>Selecione a <strong>Aula</strong> e o <strong>Bloco</strong> atual</li>
+      <li>Abra os <strong>QR Codes</strong> do bloco atual</li>
+      <li>Compartilhe os 4 QR Codes no chat do Teams (print screen ou copiar imagem)</li>
+      <li>Alunos escaneiam e respondem no celular ou navegador</li>
+      <li>No retorno, as respostas aparecem no Painel em tempo real</li>
+      <li>Para o próximo bloco: clique <strong>▶️ Próximo Bloco</strong> (reseta automaticamente)</li>
+      <li>Os QR Codes <strong>permanecem os mesmos</strong> — só muda o bloco via seletor</li>
+    </ol>
+  </div>
+
+  <div class="footer">
+    <p>Prof. Victor Atui — MBA FIAP 2026 — <a href="https://linkedin.com/in/victoratui" target="_blank">LinkedIn</a></p>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "breakout-rooms-mba-fiap-2026",
+  "version": "1.0.0",
+  "description": "Breakout Rooms interativos - MBA FIAP 2026 - Prof. Victor Atui",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
