@@ -79,6 +79,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#e6edf
 <script src="breakout-data.js"></script>
 <script>
 const API = location.origin;
+
+// Keepalive — ping server every 4 min to prevent Render sleep during class
+setInterval(() => { fetch(`${API}/health`).catch(() => {}); }, 4 * 60 * 1000);
+// Initial wakeup
+fetch(`${API}/health`).catch(() => {});
 const grupos = ["alfa","beta","gamma","delta"];
 const grupoLabels = {alfa:"GRUPO ALFA",beta:"GRUPO BETA",gamma:"GRUPO GAMMA",delta:"GRUPO DELTA"};
 

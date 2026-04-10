@@ -40,10 +40,28 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#e6edf
 .response-card .time{color:#484f58;font-size:0.75em;margin-top:4px}
 .empty{text-align:center;color:#484f58;padding:20px;font-style:italic}
 .logo{font-size:0.8em;color:#484f58;text-align:center;margin-top:24px;padding:12px}
+/* Loading overlay */
+.loading-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:#0d1117;display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:9999;transition:opacity 0.5s}
+.loading-overlay.hidden{opacity:0;pointer-events:none}
+.spinner{width:50px;height:50px;border:4px solid #30363d;border-top:4px solid #58a6ff;border-radius:50%;animation:spin 1s linear infinite;margin-bottom:20px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{color:#58a6ff;font-size:1.2em;font-weight:600;margin-bottom:8px}
+.loading-sub{color:#8b949e;font-size:0.9em;text-align:center;max-width:300px}
+.loading-retry{color:#f0883e;font-size:0.85em;margin-top:16px}
 </style>
 </head>
 <body>
+
+<!-- Loading overlay — handles server cold start -->
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text">Conectando ao servidor...</div>
+  <div class="loading-sub">O servidor pode levar alguns segundos para iniciar. Aguarde.</div>
+  <div class="loading-retry" id="loading-retry"></div>
+</div>
+
 <div class="container" id="app"></div>
+
 <script src="breakout-data.js"></script>
 <script>
 const params = new URLSearchParams(location.search);
@@ -55,12 +73,37 @@ const API = location.origin;
 
 let currentBloco = 1;
 let submitted = false;
+let sseConnection = null;
 
+// === SERVER WAKEUP WITH RETRY ===
+async function waitForServer(maxRetries = 10) {
+  const loadingEl = document.getElementById("loading");
+  const retryEl = document.getElementById("loading-retry");
+  
+  for (let i = 0; i < maxRetries; i++) {
+    retryEl.textContent = i > 0 ? `Tentativa ${i + 1} de ${maxRetries}...` : "";
+    try {
+      const r = await fetch(`${API}/health`, { signal: AbortSignal.timeout(8000) });
+      if (r.ok) {
+        loadingEl.classList.add("hidden");
+        setTimeout(() => loadingEl.style.display = "none", 500);
+        return true;
+      }
+    } catch(e) {}
+    // Wait before retry (increasing delay)
+    await new Promise(ok => setTimeout(ok, 2000 + i * 1000));
+  }
+  // Final fallback — show error but let them try anyway
+  retryEl.innerHTML = "⚠️ Servidor demorando. <a href='javascript:location.reload()' style='color:#58a6ff'>Toque para recarregar</a>";
+  return false;
+}
+
+// === MAIN RENDER ===
 function render() {
   const aulaData = BREAKOUT_DATA[aula];
   if (!aulaData) { document.getElementById("app").innerHTML = `<div class="header"><h1>Aula não encontrada</h1></div>`; return; }
   const blocoData = aulaData.blocos[currentBloco];
-  if (!blocoData) { document.getElementById("app").innerHTML = `<div class="header"><h1>Bloco não encontrado</h1></div>`; return; }
+  if (!blocoData) { document.getElementById("app").innerHTML = `<div class="header"><h1>Aguardando professor iniciar o bloco...</h1><p style="color:#8b949e;margin-top:12px">Recarregue a página quando o professor indicar.</p></div>`; return; }
   const desafio = blocoData.grupos[grupo] || "Desafio não encontrado para este grupo.";
 
   document.getElementById("app").innerHTML = `
@@ -77,7 +120,7 @@ function render() {
     <div id="form-area">
       <div class="form-group">
         <label>Seu nome</label>
-        <input type="text" id="nome" placeholder="Ex: Maria Silva" autocomplete="name">
+        <input type="text" id="nome" placeholder="Ex: Maria Silva" autocomplete="name" value="${localStorage.getItem('br_nome') || ''}">
       </div>
       <div class="form-group">
         <label>Resposta do grupo (colaborem!)</label>
@@ -99,7 +142,9 @@ function render() {
 function startTimer(seconds) {
   let remaining = seconds;
   const el = document.getElementById("timer");
+  if (!el) return;
   const tick = () => {
+    if (!document.getElementById("timer")) return;
     if (remaining <= 0) { el.textContent = "00:00"; el.style.color = "#f85149"; return; }
     const m = Math.floor(remaining / 60);
     const s = remaining % 60;
@@ -115,32 +160,45 @@ async function submitResponse() {
   const nome = document.getElementById("nome").value.trim();
   const resposta = document.getElementById("resposta").value.trim();
   if (!nome || !resposta) { alert("Preencha seu nome e a resposta!"); return; }
+  
+  // Save name for next time
+  localStorage.setItem("br_nome", nome);
+  
   const btn = document.getElementById("btn-submit");
   btn.disabled = true; btn.textContent = "Enviando...";
-  try {
-    const res = await fetch(`${API}/api/submit`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ aula, bloco: currentBloco, grupo, nome, resposta })
-    });
-    if (res.ok) {
-      document.getElementById("form-area").innerHTML = `
-        <div class="success">
-          <h2>✅ Resposta Enviada!</h2>
-          <p>Obrigado, ${nome}! Sua contribuição foi registrada.<br>Aguarde o retorno do breakout room.</p>
-        </div>
-      `;
-    }
-  } catch(e) {
-    alert("Erro ao enviar. Tente novamente."); btn.disabled = false; btn.textContent = "📤 Enviar Resposta";
+  
+  // Retry logic for submit
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(`${API}/api/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ aula, bloco: currentBloco, grupo, nome, resposta })
+      });
+      if (res.ok) {
+        document.getElementById("form-area").innerHTML = `
+          <div class="success">
+            <h2>✅ Resposta Enviada!</h2>
+            <p>Obrigado, ${nome}! Sua contribuição foi registrada.<br>Aguarde o retorno do breakout room.</p>
+          </div>
+        `;
+        loadResponses();
+        return;
+      }
+    } catch(e) {}
+    await new Promise(ok => setTimeout(ok, 2000));
   }
+  alert("Erro ao enviar. Verifique sua conexão e tente novamente.");
+  btn.disabled = false; btn.textContent = "📤 Enviar Resposta";
 }
 
 async function loadResponses() {
   try {
     const res = await fetch(`${API}/api/responses?aula=${aula}&bloco=${currentBloco}`);
-    const data = await res.json();
-    renderResponses(data[grupo] || []);
+    if (res.ok) {
+      const data = await res.json();
+      renderResponses(data[grupo] || []);
+    }
   } catch(e) {}
 }
 
@@ -151,43 +209,47 @@ function renderResponses(list) {
   el.innerHTML = list.map(r => `
     <div class="response-card">
       <div class="name">👤 ${r.nome}</div>
-      <div class="text">${r.resposta.replace(/\n/g,"<br>")}</div>
+      <div class="text">${(r.resposta || "").replace(/</g,"&lt;").replace(/\n/g,"<br>")}</div>
       <div class="time">${new Date(r.ts).toLocaleTimeString("pt-BR")}</div>
     </div>
   `).join("");
 }
 
 function connectSSE() {
-  const es = new EventSource(`${API}/api/stream`);
-  es.onmessage = (e) => {
-    const data = JSON.parse(e.data);
-    if (data.type === "new_response" && data.aula == aula && data.bloco == currentBloco && data.grupo === grupo) {
-      loadResponses();
-    }
-    if (data.type === "reset" && data.aula == aula && data.bloco == currentBloco) {
-      currentBloco = parseInt(data.bloco);
-      submitted = false;
-      render();
-    }
-    if (data.type === "new_bloco" && data.aula == aula) {
-      currentBloco = parseInt(data.bloco);
-      submitted = false;
-      render();
-    }
+  if (sseConnection) { try { sseConnection.close(); } catch(e) {} }
+  sseConnection = new EventSource(`${API}/api/stream`);
+  sseConnection.onmessage = (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.type === "new_response" && data.aula == aula && data.bloco == currentBloco && data.grupo === grupo) {
+        loadResponses();
+      }
+      if (data.type === "reset" && data.aula == aula) {
+        // Bloco was reset — reload to get new challenge
+        submitted = false;
+        render();
+      }
+    } catch(e) {}
+  };
+  sseConnection.onerror = () => {
+    // Reconnect after 5s
+    setTimeout(() => { if (sseConnection.readyState === 2) connectSSE(); }, 5000);
   };
 }
 
-// Listen for bloco changes via URL hash
-window.addEventListener("hashchange", () => {
-  const b = parseInt(location.hash.replace("#bloco",""));
-  if (b >= 1 && b <= 4) { currentBloco = b; submitted = false; render(); }
-});
-if (location.hash) {
-  const b = parseInt(location.hash.replace("#bloco",""));
-  if (b >= 1 && b <= 4) currentBloco = b;
+// Handle bloco from hash
+function getBlocoFromHash() {
+  const match = location.hash.match(/bloco(\d)/);
+  return match ? parseInt(match[1]) : 1;
 }
+currentBloco = getBlocoFromHash();
+window.addEventListener("hashchange", () => {
+  const b = getBlocoFromHash();
+  if (b >= 1 && b <= 4 && b !== currentBloco) { currentBloco = b; submitted = false; render(); }
+});
 
-render();
+// === START ===
+waitForServer().then(() => render());
 </script>
 </body>
 </html>
