@@ -1,21 +1,41 @@
-// Breakout Room Server — Node.js (zero dependencies)
+// Breakout Room Server — Node.js
 // Serves static files + real-time data API via SSE
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const url = require("url");
 const crypto = require("crypto");
-let QRCode;
-try { QRCode = require("qrcode"); } catch(e) {
-  try { QRCode = require(path.join(__dirname, "..", "node_modules", "qrcode")); } catch(e2) {
-    console.warn("⚠️ qrcode module not found, QR API disabled. Run: npm install qrcode");
+
+// QRCode — optional, loaded safely
+let QRCode = null;
+try { QRCode = require("qrcode"); console.log("✅ qrcode module loaded"); } catch(e) {
+  console.warn("⚠️ qrcode not found via require('qrcode'), trying local...");
+  try { QRCode = require(path.join(__dirname, "node_modules", "qrcode")); console.log("✅ qrcode loaded from local node_modules"); } catch(e2) {
+    console.warn("⚠️ qrcode module not available. QR API will generate fallback.");
   }
 }
 
-const PORT = process.env.PORT || 8080;
-const MIME = { ".html": "text/html", ".css": "text/css", ".js": "application/javascript", ".png": "image/png", ".svg": "image/svg+xml", ".json": "application/json", ".ico": "image/x-icon" };
+// UUID helper (compatible with Node 14+)
+function uuid() {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === "x" ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
 
-// In-memory store: { aulaX_blocoY: { alfa: [...], beta: [...], gamma: [...], delta: [...] } }
+const PORT = process.env.PORT || 8080;
+const MIME = {
+  ".html": "text/html; charset=utf-8",
+  ".css": "text/css",
+  ".js": "application/javascript; charset=utf-8",
+  ".png": "image/png",
+  ".svg": "image/svg+xml",
+  ".json": "application/json",
+  ".ico": "image/x-icon"
+};
+
+// In-memory store
 const store = {};
 const sseClients = new Set();
 
@@ -27,155 +47,181 @@ function ensureRoom(aula, bloco) {
 }
 function broadcast(data) {
   const msg = `data: ${JSON.stringify(data)}\n\n`;
-  for (const res of sseClients) { try { res.write(msg); } catch(e) { sseClients.delete(res); } }
+  const dead = [];
+  for (const res of sseClients) {
+    try { res.write(msg); } catch(e) { dead.push(res); }
+  }
+  dead.forEach(r => sseClients.delete(r));
+}
+
+// Simple SVG QR fallback (generates a "scan me" placeholder if qrcode module missing)
+function fallbackQR(text, color) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+    <rect width="256" height="256" fill="#0d1117"/>
+    <rect x="20" y="20" width="216" height="216" rx="12" fill="none" stroke="${color || '#fff'}" stroke-width="3" stroke-dasharray="8,4"/>
+    <text x="128" y="110" text-anchor="middle" fill="${color || '#fff'}" font-family="sans-serif" font-size="16" font-weight="bold">QR CODE</text>
+    <text x="128" y="140" text-anchor="middle" fill="#8b949e" font-family="sans-serif" font-size="11">Use o link abaixo</text>
+    <text x="128" y="165" text-anchor="middle" fill="#58a6ff" font-family="sans-serif" font-size="9">${text.substring(0,40)}</text>
+  </svg>`;
 }
 
 const server = http.createServer((req, res) => {
-  const parsed = url.parse(req.url, true);
-  const pathname = parsed.pathname;
+  try {
+    const parsed = url.parse(req.url, true);
+    const pathname = parsed.pathname;
 
-  // CORS
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  if (req.method === "OPTIONS") { res.writeHead(200); res.end(); return; }
+    // CORS
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    if (req.method === "OPTIONS") { res.writeHead(200); res.end(); return; }
 
-  // API: Submit response
-  if (pathname === "/api/submit" && req.method === "POST") {
-    let body = "";
-    req.on("data", c => body += c);
-    req.on("end", () => {
-      try {
-        const { aula, bloco, grupo, nome, resposta } = JSON.parse(body);
-        const room = ensureRoom(aula, bloco);
-        const g = grupo.toLowerCase();
-        if (!room[g]) { res.writeHead(400); res.end(JSON.stringify({ error: "Grupo inválido" })); return; }
-        const entry = { id: crypto.randomUUID(), nome, resposta, ts: Date.now() };
-        room[g].push(entry);
-        broadcast({ type: "new_response", aula, bloco, grupo: g, entry });
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ ok: true, entry }));
-      } catch(e) { res.writeHead(400); res.end(JSON.stringify({ error: e.message })); }
-    });
-    return;
-  }
-
-  // API: Get responses
-  if (pathname === "/api/responses" && req.method === "GET") {
-    const { aula, bloco } = parsed.query;
-    const room = ensureRoom(aula || 1, bloco || 1);
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify(room));
-    return;
-  }
-
-  // API: Reset room
-  if (pathname === "/api/reset" && req.method === "POST") {
-    let body = "";
-    req.on("data", c => body += c);
-    req.on("end", () => {
-      try {
-        const { aula, bloco } = JSON.parse(body);
-        const k = getKey(aula, bloco);
-        store[k] = { alfa: [], beta: [], gamma: [], delta: [] };
-        broadcast({ type: "reset", aula, bloco });
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ ok: true }));
-      } catch(e) { res.writeHead(400); res.end(JSON.stringify({ error: e.message })); }
-    });
-    return;
-  }
-
-  // API: Reset ALL for an aula
-  if (pathname === "/api/reset-aula" && req.method === "POST") {
-    let body = "";
-    req.on("data", c => body += c);
-    req.on("end", () => {
-      try {
-        const { aula } = JSON.parse(body);
-        for (let b = 1; b <= 4; b++) { store[getKey(aula, b)] = { alfa: [], beta: [], gamma: [], delta: [] }; }
-        broadcast({ type: "reset_aula", aula });
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ ok: true }));
-      } catch(e) { res.writeHead(400); res.end(JSON.stringify({ error: e.message })); }
-    });
-    return;
-  }
-
-  // API: Generate QR Code as SVG
-  if (pathname === "/api/qr" && req.method === "GET") {
-    const { text, color } = parsed.query;
-    if (!text || !QRCode) { res.writeHead(400); res.end("Missing text param or qrcode module"); return; }
-    QRCode.toString(decodeURIComponent(text), {
-      type: "svg",
-      color: { dark: color || "#FFFFFF", light: "#0d111700" },
-      margin: 2,
-      width: 256
-    }, (err, svg) => {
-      if (err) { res.writeHead(500); res.end(err.message); return; }
-      res.writeHead(200, { "Content-Type": "image/svg+xml", "Cache-Control": "public, max-age=3600" });
-      res.end(svg);
-    });
-    return;
-  }
-
-  // API: Generate QR Code as data URL (for embedding)
-  if (pathname === "/api/qr-data" && req.method === "GET") {
-    const { text, color } = parsed.query;
-    if (!text || !QRCode) { res.writeHead(400); res.end(JSON.stringify({error:"Missing text or qrcode module"})); return; }
-    QRCode.toDataURL(decodeURIComponent(text), {
-      color: { dark: color || "#FFFFFF", light: "#0d1117" },
-      margin: 2,
-      width: 280
-    }, (err, dataUrl) => {
-      if (err) { res.writeHead(500); res.end(JSON.stringify({error:err.message})); return; }
+    // Health check
+    if (pathname === "/health") {
       res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ dataUrl }));
-    });
-    return;
-  }
+      res.end(JSON.stringify({ status: "ok", uptime: process.uptime(), qrcode: !!QRCode }));
+      return;
+    }
 
-  // SSE: Real-time updates
-  if (pathname === "/api/stream") {
-    res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", "Connection": "keep-alive" });
-    res.write("data: {\"type\":\"connected\"}\n\n");
-    sseClients.add(res);
-    req.on("close", () => sseClients.delete(res));
-    return;
-  }
+    // API: Submit response
+    if (pathname === "/api/submit" && req.method === "POST") {
+      let body = "";
+      req.on("data", c => { body += c; if (body.length > 1e6) req.destroy(); });
+      req.on("end", () => {
+        try {
+          const { aula, bloco, grupo, nome, resposta } = JSON.parse(body);
+          const room = ensureRoom(aula, bloco);
+          const g = (grupo || "").toLowerCase();
+          if (!room[g]) { res.writeHead(400); res.end(JSON.stringify({ error: "Grupo inválido" })); return; }
+          const entry = { id: uuid(), nome: nome || "Anônimo", resposta: resposta || "", ts: Date.now() };
+          room[g].push(entry);
+          broadcast({ type: "new_response", aula, bloco, grupo: g, entry });
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok: true, entry }));
+        } catch(e) { res.writeHead(400); res.end(JSON.stringify({ error: e.message })); }
+      });
+      return;
+    }
 
-  // Static files
-  let filePath = pathname === "/" ? "/index.html" : pathname;
-  filePath = path.join(__dirname, filePath);
-  const ext = path.extname(filePath);
-  if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-    res.writeHead(200, { "Content-Type": MIME[ext] || "text/plain" });
-    fs.createReadStream(filePath).pipe(res);
-  } else {
-    // Try .html extension
-    if (fs.existsSync(filePath + ".html")) {
-      res.writeHead(200, { "Content-Type": "text/html" });
+    // API: Get responses
+    if (pathname === "/api/responses" && req.method === "GET") {
+      const { aula, bloco } = parsed.query;
+      const room = ensureRoom(aula || 1, bloco || 1);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(room));
+      return;
+    }
+
+    // API: Reset room
+    if (pathname === "/api/reset" && req.method === "POST") {
+      let body = "";
+      req.on("data", c => body += c);
+      req.on("end", () => {
+        try {
+          const { aula, bloco } = JSON.parse(body);
+          store[getKey(aula, bloco)] = { alfa: [], beta: [], gamma: [], delta: [] };
+          broadcast({ type: "reset", aula, bloco });
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok: true }));
+        } catch(e) { res.writeHead(400); res.end(JSON.stringify({ error: e.message })); }
+      });
+      return;
+    }
+
+    // API: Reset ALL for an aula
+    if (pathname === "/api/reset-aula" && req.method === "POST") {
+      let body = "";
+      req.on("data", c => body += c);
+      req.on("end", () => {
+        try {
+          const { aula } = JSON.parse(body);
+          for (let b = 1; b <= 4; b++) store[getKey(aula, b)] = { alfa: [], beta: [], gamma: [], delta: [] };
+          broadcast({ type: "reset_aula", aula });
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok: true }));
+        } catch(e) { res.writeHead(400); res.end(JSON.stringify({ error: e.message })); }
+      });
+      return;
+    }
+
+    // API: Generate QR Code as SVG
+    if (pathname === "/api/qr" && req.method === "GET") {
+      const text = parsed.query.text ? decodeURIComponent(parsed.query.text) : "";
+      const color = parsed.query.color ? decodeURIComponent(parsed.query.color) : "#FFFFFF";
+      if (!text) { res.writeHead(400); res.end("Missing text param"); return; }
+
+      if (QRCode) {
+        QRCode.toString(text, {
+          type: "svg", color: { dark: color, light: "#00000000" }, margin: 2, width: 256
+        }, (err, svg) => {
+          if (err) { res.writeHead(200, { "Content-Type": "image/svg+xml" }); res.end(fallbackQR(text, color)); return; }
+          res.writeHead(200, { "Content-Type": "image/svg+xml", "Cache-Control": "public, max-age=3600" });
+          res.end(svg);
+        });
+      } else {
+        res.writeHead(200, { "Content-Type": "image/svg+xml" });
+        res.end(fallbackQR(text, color));
+      }
+      return;
+    }
+
+    // SSE: Real-time updates
+    if (pathname === "/api/stream") {
+      res.writeHead(200, {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no"
+      });
+      res.write("data: {\"type\":\"connected\"}\n\n");
+      sseClients.add(res);
+      const keepAlive = setInterval(() => {
+        try { res.write(": keepalive\n\n"); } catch(e) { clearInterval(keepAlive); sseClients.delete(res); }
+      }, 25000);
+      req.on("close", () => { clearInterval(keepAlive); sseClients.delete(res); });
+      return;
+    }
+
+    // Static files
+    let filePath = pathname === "/" ? "/index.html" : pathname;
+    filePath = path.join(__dirname, filePath);
+    // Security: prevent directory traversal
+    if (!filePath.startsWith(__dirname)) { res.writeHead(403); res.end("Forbidden"); return; }
+
+    const ext = path.extname(filePath);
+    if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+      res.writeHead(200, { "Content-Type": MIME[ext] || "text/plain" });
+      fs.createReadStream(filePath).pipe(res);
+    } else if (fs.existsSync(filePath + ".html")) {
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
       fs.createReadStream(filePath + ".html").pipe(res);
     } else {
-      res.writeHead(404);
+      res.writeHead(404, { "Content-Type": "text/plain" });
       res.end("404 Not Found");
     }
+  } catch(err) {
+    console.error("Request error:", err);
+    try { res.writeHead(500); res.end("Internal Server Error"); } catch(e) {}
   }
 });
 
+// Global error handling
+process.on("uncaughtException", (err) => { console.error("Uncaught:", err); });
+process.on("unhandledRejection", (err) => { console.error("Unhandled:", err); });
+
 server.listen(PORT, "0.0.0.0", () => {
-  const nets = require("os").networkInterfaces();
-  let localIP = "localhost";
-  for (const name of Object.keys(nets)) {
-    for (const net of nets[name]) {
-      if (net.family === "IPv4" && !net.internal) { localIP = net.address; break; }
+  console.log(`\n🚀 Breakout Room Server rodando na porta ${PORT}`);
+  console.log(`   QRCode module: ${QRCode ? "✅ Ativo" : "⚠️ Fallback SVG"}`);
+  console.log(`   Node version: ${process.version}`);
+  try {
+    const nets = require("os").networkInterfaces();
+    for (const name of Object.keys(nets)) {
+      for (const net of nets[name]) {
+        if (net.family === "IPv4" && !net.internal) {
+          console.log(`   Rede: http://${net.address}:${PORT}`);
+        }
+      }
     }
-  }
-  console.log(`\n🚀 Breakout Room Server rodando!`);
-  console.log(`   Local:   http://localhost:${PORT}`);
-  console.log(`   Rede:    http://${localIP}:${PORT}`);
-  console.log(`\n📱 Página do aluno:     http://${localIP}:${PORT}/aluno.html?aula=1&grupo=alfa`);
-  console.log(`📊 Painel professor:    http://${localIP}:${PORT}/professor.html`);
-  console.log(`📎 QR Codes:            http://${localIP}:${PORT}/qrcodes.html?aula=1`);
-  console.log(`\nPressione Ctrl+C para parar.\n`);
+  } catch(e) {}
+  console.log("");
 });
