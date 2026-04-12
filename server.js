@@ -65,10 +65,40 @@ function fallbackQR(text, color) {
   </svg>`;
 }
 
-// Local AI fallback — keyword-based answers from course content
+// Load AI knowledge base from file
+let AI_KNOWLEDGE = {};
+try { AI_KNOWLEDGE = require(path.join(__dirname, "ai-knowledge.js")).AI_KNOWLEDGE; console.log("✅ AI knowledge loaded"); } catch(e) { console.warn("⚠️ ai-knowledge.js not found"); }
+
+// AI answer engine using real course content
 function generateLocalAnswer(q, ctx) {
   const ql = (q || "").toLowerCase();
-  const answers = [
+  const aulaNum = parseInt((ctx || "").match(/Aula (\d)/)?.[1]) || 4;
+  
+  // Search through accumulated knowledge for this aula
+  for (let a = 1; a <= aulaNum; a++) {
+    const entries = AI_KNOWLEDGE[a] || [];
+    for (const entry of entries) {
+      if (entry.q.some(k => ql.includes(k.toLowerCase()))) {
+        return entry.a;
+      }
+    }
+  }
+  
+  // Check if topic exists in FUTURE aulas
+  for (let a = aulaNum + 1; a <= 4; a++) {
+    const entries = AI_KNOWLEDGE[a] || [];
+    for (const entry of entries) {
+      if (entry.q.some(k => ql.includes(k.toLowerCase()))) {
+        return `Este tema será abordado na Aula ${a}. Por enquanto, foque no conteúdo da aula atual (Aula ${aulaNum}).`;
+      }
+    }
+  }
+  
+  return `Sobre "${q}": Este tema não faz parte diretamente do conteúdo coberto até a Aula ${aulaNum}. Pode ser um tema complementar — consulte o Guia do Professor ou os slides da aula correspondente.`;
+}
+
+// Legacy fallback (kept for compatibility but replaced by ai-knowledge.js)
+const _legacyAnswers = [
     { keys: ["ooda","observar","orientar","decidir","agir"], a: "OODA Loop (John Boyd): Observar→Orientar→Decidir→Agir. Ciclo de decisão rápida. Quanto mais rápido o ciclo, maior a vantagem competitiva. Use para decisões táticas em ambientes incertos." },
     { keys: ["3m","algoritmo","minimo esforço","melhor desempenho"], a: "Algoritmo 3M: Melhor Desempenho + Máxima Segurança + Mínimo Esforço. 'Mínimo Esforço' não é preguiça — é eficiência máxima: eliminar desperdícios e focar no essencial." },
     { keys: ["sbi","feedback","situação","comportamento","impacto"], a: "Modelo SBI: Situação (quando/onde) + Comportamento (o que observou) + Impacto (qual o efeito). Ex: 'Na reunião de hoje (S), você apresentou dados claros (B), isso convenceu o board (I).' Sempre foque no comportamento, não na pessoa." },
@@ -97,37 +127,8 @@ function generateLocalAnswer(q, ctx) {
     { keys: ["people analytics","turnover","engajamento"], a: "People Analytics: Dados para decisão de pessoas. Pode prever turnover com 85%+ de acurácia. Métricas: eNPS, turnover, PDI ativo, frequência de 1:1s, absenteísmo." },
     { keys: ["sbar","situation","background","assessment","recommendation"], a: "SBAR: Situation (o que acontece), Background (contexto), Assessment (análise), Recommendation (proposta). Usado em hospitais e negócios para comunicação clara." },
   ];
-  // Filter by aula scope: aula 1 = only aula 1 content, aula 2 = 1+2, etc.
-  const aulaNum = parseInt(ctx?.match?.(/Aula (\d)/)?.[1]) || 4;
-  const aulaScopes = {
-    1: ["ooda","3m","algoritmo","sbi","feedback","eisenhower","tuckman","aristoteles","aristóteles","scarf","prontidão","prontidao","performance","protagonis"],
-    2: ["competenc","growth mindset","fixed mindset","dweck","nadella","grit","duckworth","antifragil","antifrágil","taleb","pdi","covey","cialdini","sbar","pyramid","grow ","learnability","design thinking","pomodoro","kanban","malala"],
-    3: ["schein","iceberg","cultura","cvf","clã","adhocracia","hierarquia","mercado","netflix","zappos","spotify","holocracia","kotter","adkar","lean startup","mvp","open innovation","ambidestria"],
-    4: ["okr","cfr","north star","radical candor","kim scott","people analytics","30-60-90","plano de ação","exo","exponencia"]
-  };
-  
-  // Build allowed keywords based on accumulated aulas
-  let allowedKeys = new Set();
-  for (let a = 1; a <= aulaNum; a++) {
-    (aulaScopes[a] || []).forEach(k => allowedKeys.add(k));
-  }
-
-  for (const entry of answers) {
-    if (entry.keys.some(k => ql.includes(k))) {
-      // Check if this topic is in scope for current aula
-      const inScope = entry.keys.some(k => [...allowedKeys].some(ak => k.includes(ak) || ak.includes(k)));
-      if (inScope) return entry.a;
-      
-      // Find which aula it belongs to
-      for (let a = aulaNum + 1; a <= 4; a++) {
-        if (entry.keys.some(k => (aulaScopes[a] || []).some(ak => k.includes(ak) || ak.includes(k)))) {
-          return `Este tema (${entry.keys[0]}) será abordado na Aula ${a}. Por enquanto, foque no conteúdo da aula atual.`;
-        }
-      }
-      return entry.a; // fallback: show anyway
-    }
-  }
-  return `Sobre "${q}": Este tema não faz parte diretamente do conteúdo das aulas cobertas até agora (Aula ${aulaNum}). Pode ser abordado em aulas futuras ou é um tema complementar.`;
+  // Legacy answers not used — see generateLocalAnswer above
+  return `Sobre "${q}": Consulte o material da aula.`;
 }
 
 const server = http.createServer((req, res) => {
