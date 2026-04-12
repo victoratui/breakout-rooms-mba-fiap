@@ -38,6 +38,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#e6edf
 .ai.done{opacity:.4}
 .ai .tb{flex-shrink:0;color:#8b949e;font-variant-numeric:tabular-nums;width:38px}
 .ai .dr{color:#484f58;font-size:9px}
+.ai .sl{color:#f0883e;font-size:9px;font-weight:600;background:#1a1500;padding:0 3px;border-radius:3px;white-space:nowrap}
 .ai .ds{flex:1;color:#c9d1d9}
 .tt{font-size:8px;padding:1px 4px;border-radius:3px;font-weight:600;text-transform:uppercase}
 .tt-exposicao{background:#1a237e;color:#64b5f6}.tt-dinamica{background:#1b4332;color:#2ecc71}.tt-quiz{background:#4a148c;color:#ce93d8}.tt-enquete{background:#0d47a1;color:#42a5f5}.tt-video{background:#8b0000;color:#ff6b6b}.tt-breakout,.tt-breakout_prep{background:#7b2d8e;color:#ce93d8}.tt-debate{background:#7b2d8e;color:#e1bee7}.tt-intervalo{background:#1b3a2d;color:#81c784}.tt-chamada{background:#bf360c;color:#ff8a65}.tt-avaliacao{background:#f9a825;color:#0d1117}.tt-transicao{background:#21262d;color:#8b949e}.tt-ia{background:#311b92;color:#b39ddb}
@@ -168,13 +169,15 @@ function renderList(){
   el.innerHTML=all.map((a,i)=>{
     let h="";if(a.bNum!==lb){lb=a.bNum;h=`<li style="padding:6px 4px;color:#58a6ff;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;border-top:1px solid #30363d;margin-top:6px">${a.bTitle}</li>`;}
     const c=i===idx?"act":(i<idx?"done":"");
-    return h+`<li class="ai ${c}" onclick="goTo(${i})"><span class="tb">${a.tempo}</span><span class="tt tt-${a.tipo}">${a.tipo}</span><span class="ds">${a.desc}</span><span class="dr">${a.dur}m</span></li>`;
+    const sl=a.slide?`<span class="sl">📄${a.slide}</span>`:"";
+    return h+`<li class="ai ${c}" onclick="goTo(${i})"><span class="tb">${a.tempo}</span><span class="tt tt-${a.tipo}">${a.tipo}</span><span class="ds">${a.desc}</span>${sl}<span class="dr">${a.dur}m</span></li>`;
   }).join("");
 }
 
 function showActivity(){
   if(idx<0||idx>=all.length)return;const a=all[idx];renderList();
-  document.getElementById("current-activity").innerHTML=`<h2><span class="tt tt-${a.tipo}">${a.tipo}</span> ${a.tempo} (${a.dur}m)</h2><div class="bd">${a.desc}</div>${a.nota?`<div class="nt">💡 ${a.nota}</div>`:""}`;
+  const slideInfo=a.slide?` | 📄 Slide ${a.slide}`:"";
+  document.getElementById("current-activity").innerHTML=`<h2><span class="tt tt-${a.tipo}">${a.tipo}</span> ${a.tempo} (${a.dur}m)${slideInfo}</h2><div class="bd">${a.desc}</div>${a.nota?`<div class="nt">💡 ${a.nota}</div>`:""}`;
   const n=all[idx+1];
   document.getElementById("next-desc").innerHTML=n?`<span class="tt tt-${n.tipo}">${n.tipo}</span> ${n.tempo} — ${n.desc}`:"🏁 Fim da aula!";
   document.querySelectorAll(".ai")[idx]?.scrollIntoView({behavior:"smooth",block:"center"});
