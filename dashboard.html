@@ -96,6 +96,24 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#e6edf
 .btn-alert.muted{background:#21262d!important;border-color:#30363d!important;color:#8b949e!important}
 .btn-alert.flash{animation:btn-flash .5s ease-in-out 6}
 @keyframes btn-flash{0%,100%{background:#da3633;border-color:#f85149;color:#fff}50%{background:#f0883e;border-color:#f0883e;color:#0d1117}}
+/* Chat flutuante para perguntas */
+.chat-float{position:fixed;top:60px;right:340px;width:420px;bottom:10px;background:#161b22;border:2px solid #58a6ff;border-radius:12px;z-index:200;display:none;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+.chat-float.show{display:flex}
+.chat-float .chat-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#1a2332;border-radius:10px 10px 0 0;border-bottom:1px solid #30363d}
+.chat-float .chat-header h3{color:#58a6ff;font-size:14px}
+.chat-float .chat-header button{background:#da3633;border:none;color:#fff;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600}
+.chat-float .chat-messages{flex:1;overflow-y:auto;padding:10px}
+.chat-float .chat-msg{margin-bottom:10px;padding:8px 12px;border-radius:8px;font-size:13px;line-height:1.5;max-width:90%}
+.chat-float .chat-msg.user{background:#1f3a5f;color:#e6edf3;margin-left:auto;border-bottom-right-radius:2px}
+.chat-float .chat-msg.ai{background:#1b2838;color:#c9d1d9;margin-right:auto;border-bottom-left-radius:2px}
+.chat-float .chat-msg .msg-label{font-size:10px;color:#8b949e;margin-bottom:2px}
+.chat-float .chat-input-area{display:flex;padding:8px;border-top:1px solid #30363d;gap:6px}
+.chat-float .chat-input-area input{flex:1;padding:8px 12px;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;font-size:13px}
+.chat-float .chat-input-area input:focus{outline:none;border-color:#58a6ff}
+.chat-float .chat-input-area button{padding:8px 14px;background:#238636;border:none;border-radius:6px;color:#fff;cursor:pointer;font-size:12px}
+/* Professor embed na area central */
+.professor-embed{border:1px solid #30363d;border-radius:12px;overflow:hidden;flex:1;min-height:300px}
+.professor-embed iframe{width:100%;height:100%;border:none;border-radius:12px}
 .hidden{display:none}
 </style>
 </head>
@@ -146,6 +164,22 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#e6edf
     <button onclick="addLog('pergunta','❓ Pergunta: ')">❓ Pergunta</button>
     <button onclick="addLog('sistema','✅ Atividade concluída')">✅ Concluir</button>
     <button class="btn-alert" id="btn-alert-toggle" onclick="toggleAlert()">🔔 Som: ON</button>
+  </div>
+  <div class="professor-embed">
+    <iframe src="professor.html" id="professor-iframe"></iframe>
+  </div>
+</div>
+
+<!-- Chat flutuante para perguntas -->
+<div class="chat-float" id="chat-float">
+  <div class="chat-header">
+    <h3>💬 Pergunta do Aluno</h3>
+    <button onclick="closeChat()">✕ Fechar e salvar no Log</button>
+  </div>
+  <div class="chat-messages" id="chat-messages"></div>
+  <div class="chat-input-area">
+    <input id="chat-input" placeholder="Digite sua resposta ou réplica..." onkeydown="if(event.key==='Enter')sendChatMsg()">
+    <button onclick="sendChatMsg()">Enviar</button>
   </div>
 </div>
 
@@ -355,9 +389,84 @@ function addLogFromInput() {
   const input = document.getElementById("log-input");
   const text = input.value.trim();
   if (!text) return;
+  
+  // Detect question with ? → open chat float
+  if (text.includes("?")) {
+    addLog("pergunta", `❓ ${text}`);
+    openChat(text);
+    input.value = "";
+    return;
+  }
+  
   const type = text.startsWith("❓") ? "pergunta" : text.startsWith("📝") ? "obs" : "obs";
   addLog(type, text);
   input.value = "";
+}
+
+// ===== CHAT FLUTUANTE =====
+let chatMessages = [];
+let currentQuestion = "";
+
+function openChat(question) {
+  currentQuestion = question;
+  chatMessages = [];
+  const el = document.getElementById("chat-float");
+  const msgs = document.getElementById("chat-messages");
+  
+  // Add the question as first message
+  chatMessages.push({ role: "aluno", text: question });
+  msgs.innerHTML = `<div class="chat-msg user"><div class="msg-label">❓ Pergunta do aluno</div>${escapeHtml(question)}</div>`;
+  
+  el.classList.add("show");
+  document.getElementById("chat-input").focus();
+  
+  // Add a helper hint
+  const hint = document.createElement("div");
+  hint.className = "chat-msg ai";
+  hint.innerHTML = `<div class="msg-label">💡 Dica</div>Use o GenClaw webchat para buscar a resposta. Cole aqui a resposta ou escreva diretamente para registrar no log.`;
+  msgs.appendChild(hint);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function sendChatMsg() {
+  const input = document.getElementById("chat-input");
+  const text = input.value.trim();
+  if (!text) return;
+  
+  const msgs = document.getElementById("chat-messages");
+  chatMessages.push({ role: "professor", text });
+  
+  const div = document.createElement("div");
+  div.className = "chat-msg ai";
+  div.innerHTML = `<div class="msg-label">🎓 Professor</div>${escapeHtml(text)}`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  input.value = "";
+  input.focus();
+}
+
+function closeChat() {
+  const el = document.getElementById("chat-float");
+  el.classList.remove("show");
+  
+  // Save entire conversation to log
+  if (chatMessages.length > 0) {
+    addLog("pergunta", `💬 Chat sobre: "${currentQuestion}"`);
+    chatMessages.forEach(m => {
+      if (m.role === "aluno") {
+        addLog("pergunta", `  ❓ Aluno: ${m.text}`);
+      } else {
+        addLog("obs", `  🎓 Prof: ${m.text}`);
+      }
+    });
+    addLog("sistema", `💬 Chat encerrado (${chatMessages.length} mensagens)`);
+  }
+  chatMessages = [];
+  currentQuestion = "";
+}
+
+function escapeHtml(text) {
+  return text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>");
 }
 
 // Chamada
