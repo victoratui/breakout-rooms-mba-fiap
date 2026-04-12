@@ -97,10 +97,37 @@ function generateLocalAnswer(q, ctx) {
     { keys: ["people analytics","turnover","engajamento"], a: "People Analytics: Dados para decisão de pessoas. Pode prever turnover com 85%+ de acurácia. Métricas: eNPS, turnover, PDI ativo, frequência de 1:1s, absenteísmo." },
     { keys: ["sbar","situation","background","assessment","recommendation"], a: "SBAR: Situation (o que acontece), Background (contexto), Assessment (análise), Recommendation (proposta). Usado em hospitais e negócios para comunicação clara." },
   ];
-  for (const entry of answers) {
-    if (entry.keys.some(k => ql.includes(k))) return entry.a;
+  // Filter by aula scope: aula 1 = only aula 1 content, aula 2 = 1+2, etc.
+  const aulaNum = parseInt(ctx?.match?.(/Aula (\d)/)?.[1]) || 4;
+  const aulaScopes = {
+    1: ["ooda","3m","algoritmo","sbi","feedback","eisenhower","tuckman","aristoteles","aristóteles","scarf","prontidão","prontidao","performance","protagonis"],
+    2: ["competenc","growth mindset","fixed mindset","dweck","nadella","grit","duckworth","antifragil","antifrágil","taleb","pdi","covey","cialdini","sbar","pyramid","grow ","learnability","design thinking","pomodoro","kanban","malala"],
+    3: ["schein","iceberg","cultura","cvf","clã","adhocracia","hierarquia","mercado","netflix","zappos","spotify","holocracia","kotter","adkar","lean startup","mvp","open innovation","ambidestria"],
+    4: ["okr","cfr","north star","radical candor","kim scott","people analytics","30-60-90","plano de ação","exo","exponencia"]
+  };
+  
+  // Build allowed keywords based on accumulated aulas
+  let allowedKeys = new Set();
+  for (let a = 1; a <= aulaNum; a++) {
+    (aulaScopes[a] || []).forEach(k => allowedKeys.add(k));
   }
-  return `Sobre "${q}": Este tema se relaciona com o conteúdo do curso de Liderança e Gestão de Equipes de Alto Desempenho. Recomendo consultar os slides da aula correspondente ou o Guia do Professor para uma resposta mais detalhada.`;
+
+  for (const entry of answers) {
+    if (entry.keys.some(k => ql.includes(k))) {
+      // Check if this topic is in scope for current aula
+      const inScope = entry.keys.some(k => [...allowedKeys].some(ak => k.includes(ak) || ak.includes(k)));
+      if (inScope) return entry.a;
+      
+      // Find which aula it belongs to
+      for (let a = aulaNum + 1; a <= 4; a++) {
+        if (entry.keys.some(k => (aulaScopes[a] || []).some(ak => k.includes(ak) || ak.includes(k)))) {
+          return `Este tema (${entry.keys[0]}) será abordado na Aula ${a}. Por enquanto, foque no conteúdo da aula atual.`;
+        }
+      }
+      return entry.a; // fallback: show anyway
+    }
+  }
+  return `Sobre "${q}": Este tema não faz parte diretamente do conteúdo das aulas cobertas até agora (Aula ${aulaNum}). Pode ser abordado em aulas futuras ou é um tema complementar.`;
 }
 
 const server = http.createServer((req, res) => {
@@ -209,14 +236,14 @@ const server = http.createServer((req, res) => {
     req.on("data", c => { body += c; if (body.length > 50000) req.destroy(); });
     req.on("end", async () => {
       try {
-        const { question, context } = JSON.parse(body);
+        const { question, context, aula } = JSON.parse(body);
         // Use gsk web_search + summarize approach via fetch to Genspark API
         const gskKey = process.env.GSK_API_KEY || "";
         const baseUrl = process.env.GSK_BASE_URL || "https://www.genspark.ai";
         
         if (!gskKey) {
           // Fallback: generate a helpful response locally without API
-          const fallback = generateLocalAnswer(question, context);
+          const fallback = generateLocalAnswer(question, `Aula ${aula || 4}. ${context || ""}`);
           res.writeHead(200, { "Content-Type": "application/json" });
           res.end(JSON.stringify({ answer: fallback, source: "local" }));
           return;

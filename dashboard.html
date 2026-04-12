@@ -7,726 +7,359 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#e6edf3;height:100vh;overflow:hidden;display:grid;grid-template-columns:280px 1fr 320px;grid-template-rows:50px 1fr}
-/* Top bar */
-.topbar{grid-column:1/-1;background:#161b22;border-bottom:1px solid #30363d;display:flex;align-items:center;padding:0 16px;gap:12px}
+.topbar{grid-column:1/-1;background:#161b22;border-bottom:1px solid #30363d;display:flex;align-items:center;padding:0 16px;gap:10px;overflow-x:auto}
 .topbar h1{font-size:14px;color:#58a6ff;white-space:nowrap}
 .topbar select{padding:4px 8px;background:#21262d;border:1px solid #30363d;color:#e6edf3;border-radius:6px;font-size:13px}
-.topbar .clock{margin-left:auto;font-size:24px;font-weight:700;color:#f0883e;font-variant-numeric:tabular-nums}
-.topbar .btn{padding:4px 12px;border-radius:6px;border:1px solid #30363d;background:#21262d;color:#e6edf3;font-size:12px;cursor:pointer}
-.topbar .btn-green{background:#238636;border-color:#238636}
-.topbar .btn-red{background:#da3633;border-color:#da3633}
-.drift-display{display:flex;flex-direction:column;align-items:center;padding:2px 14px;border-radius:8px;border:2px solid #30363d;background:#161b22;min-width:80px}
-.drift-display .drift-label{font-size:9px;color:#8b949e;text-transform:uppercase;letter-spacing:1px}
-.drift-display .drift-value{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;color:#2ea043}
-.drift-display.behind .drift-value{color:#f85149}
-.drift-display.ahead .drift-value{color:#58a6ff}
-.drift-display.drifting{animation:drift-pulse 1s infinite}
-.drift-display.drifting .drift-value{font-weight:900}
-@keyframes drift-pulse{0%,100%{border-color:#f0883e;opacity:1}50%{border-color:#f85149;opacity:.6}}
-/* Left: Timer + Roteiro */
+.topbar .clock{margin-left:auto;font-size:22px;font-weight:700;color:#f0883e;font-variant-numeric:tabular-nums;white-space:nowrap}
+.btn{padding:4px 12px;border-radius:6px;border:1px solid #30363d;background:#21262d;color:#e6edf3;font-size:12px;cursor:pointer;white-space:nowrap}
+.btn-green{background:#238636!important;border-color:#238636!important}
+.btn-red{background:#da3633!important;border-color:#da3633!important}
+.btn-orange{background:#f0883e!important;border-color:#f0883e!important;color:#0d1117!important}
+.btn-start-init{background:#1f6feb!important;border-color:#1f6feb!important;font-size:13px!important;padding:6px 16px!important;font-weight:700}
+.drift-box{display:flex;flex-direction:column;align-items:center;padding:2px 12px;border-radius:8px;border:2px solid #30363d;background:#161b22;min-width:75px}
+.drift-box .dl{font-size:8px;color:#8b949e;text-transform:uppercase;letter-spacing:1px}
+.drift-box .dv{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;color:#2ea043}
+.drift-box.off .dv{color:#f85149}
+.drift-box.off{animation:dp 1s infinite}
+@keyframes dp{0%,100%{border-color:#f0883e;opacity:1}50%{border-color:#f85149;opacity:.6}}
 .left{background:#0d1117;border-right:1px solid #30363d;display:flex;flex-direction:column;overflow:hidden}
-.timer-box{text-align:center;padding:16px 8px;background:#161b22;border-radius:12px;margin:12px 12px 8px;border:1px solid #30363d;flex-shrink:0}
-.activity-scroll{flex:1;overflow-y:auto;padding:0 12px 12px}
-.timer-box .label{font-size:11px;color:#8b949e;text-transform:uppercase;letter-spacing:1px}
-.timer-box .time{font-size:48px;font-weight:700;font-variant-numeric:tabular-nums;color:#f0883e}
-.timer-box .time.warning{color:#f85149;animation:pulse 1s infinite}
-.timer-box .bloco-name{font-size:13px;color:#58a6ff;margin-top:4px}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
-.activity-list{list-style:none}
-.activity-item{padding:8px 10px;border-radius:8px;margin-bottom:4px;font-size:12px;display:flex;gap:8px;align-items:flex-start;cursor:pointer;border:1px solid transparent}
-.activity-item:hover{background:#161b22}
-.activity-item.active{background:#1a2332;border-color:#1f6feb}
-.activity-item.done{opacity:.5}
-.activity-item .time-badge{flex-shrink:0;color:#8b949e;font-variant-numeric:tabular-nums;width:40px}
-.activity-item .dur{color:#484f58;font-size:10px}
-.activity-item .desc{flex:1;color:#c9d1d9}
-.tipo-tag{font-size:9px;padding:1px 5px;border-radius:4px;font-weight:600;text-transform:uppercase}
-.tipo-exposicao{background:#1a237e;color:#64b5f6}
-.tipo-dinamica{background:#1b4332;color:#2ecc71}
-.tipo-quiz{background:#4a148c;color:#ce93d8}
-.tipo-enquete{background:#0d47a1;color:#42a5f5}
-.tipo-video{background:#8b0000;color:#ff6b6b}
-.tipo-breakout,.tipo-breakout_prep{background:#7b2d8e;color:#ce93d8}
-.tipo-debate{background:#7b2d8e;color:#e1bee7}
-.tipo-intervalo{background:#1b3a2d;color:#81c784}
-.tipo-chamada{background:#bf360c;color:#ff8a65}
-.tipo-avaliacao{background:#f9a825;color:#0d1117}
-.tipo-transicao{background:#21262d;color:#8b949e}
-.tipo-ia{background:#311b92;color:#b39ddb}
-/* Center: Main area */
-.center{overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
-.current-activity{background:#161b22;border:2px solid #1f6feb;border-radius:12px;padding:16px}
-.current-activity h2{color:#58a6ff;font-size:16px;margin-bottom:4px}
-.current-activity .big-desc{font-size:20px;color:#fff;margin:8px 0}
-.current-activity .nota{color:#f0883e;font-size:13px;padding:8px 12px;background:#1a1500;border-radius:8px;margin-top:8px}
-.next-up{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:12px}
-.next-up h3{color:#8b949e;font-size:12px;margin-bottom:8px;text-transform:uppercase}
-.alert-box{background:#3d1d00;border:1px solid #f0883e;border-radius:8px;padding:10px 14px;color:#f0883e;font-weight:600;font-size:14px;display:none}
-.alert-box.show{display:block}
-.shortcuts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-.shortcuts button{padding:6px 14px;border-radius:8px;border:1px solid #30363d;background:#21262d;color:#e6edf3;font-size:12px;cursor:pointer}
-.shortcuts button:hover{background:#30363d}
-/* Right: Log */
+.timer-box{text-align:center;padding:14px 8px;background:#161b22;border-radius:12px;margin:10px 10px 6px;border:1px solid #30363d;flex-shrink:0}
+.timer-box .tl{font-size:10px;color:#8b949e;text-transform:uppercase;letter-spacing:1px}
+.timer-box .tv{font-size:44px;font-weight:700;font-variant-numeric:tabular-nums;color:#f0883e}
+.timer-box .tv.warn{color:#f85149;animation:p 1s infinite}
+.timer-box .tv.stopped{color:#484f58}
+.timer-box .bn{font-size:12px;color:#58a6ff;margin-top:2px}
+@keyframes p{0%,100%{opacity:1}50%{opacity:.5}}
+.ascroll{flex:1;overflow-y:auto;padding:0 10px 10px}
+.alist{list-style:none}
+.ai{padding:7px 8px;border-radius:6px;margin-bottom:3px;font-size:11px;display:flex;gap:6px;align-items:flex-start;cursor:pointer;border:1px solid transparent}
+.ai:hover{background:#161b22}
+.ai.act{background:#1a2332;border-color:#1f6feb}
+.ai.done{opacity:.4}
+.ai .tb{flex-shrink:0;color:#8b949e;font-variant-numeric:tabular-nums;width:38px}
+.ai .dr{color:#484f58;font-size:9px}
+.ai .ds{flex:1;color:#c9d1d9}
+.tt{font-size:8px;padding:1px 4px;border-radius:3px;font-weight:600;text-transform:uppercase}
+.tt-exposicao{background:#1a237e;color:#64b5f6}.tt-dinamica{background:#1b4332;color:#2ecc71}.tt-quiz{background:#4a148c;color:#ce93d8}.tt-enquete{background:#0d47a1;color:#42a5f5}.tt-video{background:#8b0000;color:#ff6b6b}.tt-breakout,.tt-breakout_prep{background:#7b2d8e;color:#ce93d8}.tt-debate{background:#7b2d8e;color:#e1bee7}.tt-intervalo{background:#1b3a2d;color:#81c784}.tt-chamada{background:#bf360c;color:#ff8a65}.tt-avaliacao{background:#f9a825;color:#0d1117}.tt-transicao{background:#21262d;color:#8b949e}.tt-ia{background:#311b92;color:#b39ddb}
+.center{overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+.cur{background:#161b22;border:2px solid #1f6feb;border-radius:12px;padding:14px}
+.cur h2{color:#58a6ff;font-size:15px;margin-bottom:4px}
+.cur .bd{font-size:18px;color:#fff;margin:6px 0}
+.cur .nt{color:#f0883e;font-size:12px;padding:6px 10px;background:#1a1500;border-radius:8px;margin-top:6px}
+.nxt{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:10px}
+.nxt h3{color:#8b949e;font-size:11px;margin-bottom:6px;text-transform:uppercase}
+.ab{background:#3d1d00;border:1px solid #f0883e;border-radius:8px;padding:8px 12px;color:#f0883e;font-weight:600;font-size:13px;display:none}
+.ab.show{display:block}
+.sc{display:flex;gap:6px;flex-wrap:wrap}
+.sc button{padding:5px 12px;border-radius:6px;border:1px solid #30363d;background:#21262d;color:#e6edf3;font-size:11px;cursor:pointer}
+.sc button:hover{background:#30363d}
+.pembed{border:1px solid #30363d;border-radius:10px;overflow:hidden;flex:1;min-height:280px}
+.pembed iframe{width:100%;height:100%;border:none}
 .right{background:#0d1117;border-left:1px solid #30363d;display:flex;flex-direction:column}
-.right h3{padding:12px;font-size:13px;color:#8b949e;border-bottom:1px solid #30363d;text-transform:uppercase;letter-spacing:1px}
-.log-area{flex:1;overflow-y:auto;padding:8px}
-.log-entry{padding:6px 8px;font-size:12px;border-bottom:1px solid #161b22}
-.log-entry .log-time{color:#484f58;font-size:10px}
-.log-entry .log-text{color:#c9d1d9}
-.log-entry.log-chamada{border-left:3px solid #ff8a65}
-.log-entry.log-pergunta{border-left:3px solid #58a6ff}
-.log-entry.log-obs{border-left:3px solid #f0883e}
-.log-entry.log-sistema{border-left:3px solid #484f58;color:#8b949e}
-.log-input{display:flex;border-top:1px solid #30363d;padding:8px}
-.log-input input{flex:1;padding:8px;background:#161b22;border:1px solid #30363d;border-radius:6px;color:#e6edf3;font-size:13px}
-.log-input input:focus{outline:none;border-color:#58a6ff}
-.log-input button{padding:8px 12px;background:#238636;border:none;border-radius:6px;color:#fff;cursor:pointer;margin-left:6px;font-size:12px}
-/* Chamada modal */
-.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);display:none;justify-content:center;align-items:center;z-index:100}
-.modal-overlay.show{display:flex}
-.modal{background:#161b22;border:1px solid #30363d;border-radius:16px;padding:24px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto}
-.modal h2{color:#58a6ff;margin-bottom:16px}
-.modal textarea{width:100%;height:200px;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#e6edf3;padding:12px;font-size:13px;font-family:inherit;resize:vertical}
-.modal .modal-btns{display:flex;gap:8px;margin-top:12px}
-.modal .modal-btns button{flex:1;padding:10px;border-radius:8px;border:none;font-size:14px;cursor:pointer;font-weight:600}
-.modal .modal-btns .save{background:#238636;color:#fff}
-.modal .modal-btns .cancel{background:#21262d;color:#e6edf3;border:1px solid #30363d}
-/* Audio alert toggle */
-.btn-alert{position:relative}
-.btn-alert.muted{background:#21262d!important;border-color:#30363d!important;color:#8b949e!important}
-.btn-alert.flash{animation:btn-flash .5s ease-in-out 6}
-@keyframes btn-flash{0%,100%{background:#da3633;border-color:#f85149;color:#fff}50%{background:#f0883e;border-color:#f0883e;color:#0d1117}}
-/* Chat flutuante para perguntas */
-.chat-float{position:fixed;top:60px;right:340px;width:420px;bottom:10px;background:#161b22;border:2px solid #58a6ff;border-radius:12px;z-index:200;display:none;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.5)}
-.chat-float.show{display:flex}
-.chat-float .chat-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#1a2332;border-radius:10px 10px 0 0;border-bottom:1px solid #30363d}
-.chat-float .chat-header h3{color:#58a6ff;font-size:14px}
-.chat-float .chat-header button{background:#da3633;border:none;color:#fff;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600}
-.chat-float .chat-messages{flex:1;overflow-y:auto;padding:10px}
-.chat-float .chat-msg{margin-bottom:10px;padding:8px 12px;border-radius:8px;font-size:13px;line-height:1.5;max-width:90%}
-.chat-float .chat-msg.user{background:#1f3a5f;color:#e6edf3;margin-left:auto;border-bottom-right-radius:2px}
-.chat-float .chat-msg.ai{background:#1b2838;color:#c9d1d9;margin-right:auto;border-bottom-left-radius:2px}
-.chat-float .chat-msg .msg-label{font-size:10px;color:#8b949e;margin-bottom:2px}
-.chat-float .chat-input-area{display:flex;padding:8px;border-top:1px solid #30363d;gap:6px}
-.chat-float .chat-input-area input{flex:1;padding:8px 12px;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;font-size:13px}
-.chat-float .chat-input-area input:focus{outline:none;border-color:#58a6ff}
-.chat-float .chat-input-area button{padding:8px 14px;background:#238636;border:none;border-radius:6px;color:#fff;cursor:pointer;font-size:12px}
-/* Professor embed na area central */
-.professor-embed{border:1px solid #30363d;border-radius:12px;overflow:hidden;flex:1;min-height:300px}
-.professor-embed iframe{width:100%;height:100%;border:none;border-radius:12px}
-.btn-pause{background:#f0883e!important;border-color:#f0883e!important}
-.btn-running{background:#238636!important;border-color:#238636!important}
-.paused-overlay{position:fixed;top:50px;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:50;display:none;justify-content:center;align-items:center}
-.paused-overlay.show{display:flex}
-.paused-msg{background:#161b22;border:2px solid #f0883e;border-radius:16px;padding:32px 48px;text-align:center}
-.paused-msg h2{color:#f0883e;font-size:24px;margin-bottom:8px}
-.paused-msg p{color:#8b949e}
-.hidden{display:none}
+.right h3{padding:10px;font-size:12px;color:#8b949e;border-bottom:1px solid #30363d;text-transform:uppercase;letter-spacing:1px}
+.la{flex:1;overflow-y:auto;padding:6px}
+.le{padding:5px 6px;font-size:11px;border-bottom:1px solid #161b22}
+.le .lt{color:#484f58;font-size:9px}
+.le .lx{color:#c9d1d9}
+.le.log-chamada{border-left:3px solid #ff8a65}
+.le.log-pergunta{border-left:3px solid #58a6ff}
+.le.log-obs{border-left:3px solid #f0883e}
+.le.log-sistema{border-left:3px solid #484f58;color:#8b949e}
+.li{display:flex;border-top:1px solid #30363d;padding:6px}
+.li input{flex:1;padding:7px;background:#161b22;border:1px solid #30363d;border-radius:6px;color:#e6edf3;font-size:12px}
+.li input:focus{outline:none;border-color:#58a6ff}
+.li button{padding:7px 10px;background:#238636;border:none;border-radius:6px;color:#fff;cursor:pointer;margin-left:4px;font-size:11px}
+.mo{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);display:none;justify-content:center;align-items:center;z-index:100}
+.mo.show{display:flex}
+.md{background:#161b22;border:1px solid #30363d;border-radius:14px;padding:20px;max-width:480px;width:90%;max-height:80vh;overflow-y:auto}
+.md h2{color:#58a6ff;margin-bottom:12px}
+.md textarea{width:100%;height:180px;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#e6edf3;padding:10px;font-size:12px;font-family:inherit;resize:vertical}
+.md .mb{display:flex;gap:8px;margin-top:10px}
+.md .mb button{flex:1;padding:8px;border-radius:8px;border:none;font-size:13px;cursor:pointer;font-weight:600}
+.md .mb .sv{background:#238636;color:#fff}
+.md .mb .cn{background:#21262d;color:#e6edf3;border:1px solid #30363d}
+.ba{position:relative}.ba.mt{background:#21262d!important;border-color:#30363d!important;color:#8b949e!important}
+.ba.fl{animation:bf .5s ease-in-out 6}
+@keyframes bf{0%,100%{background:#da3633;color:#fff}50%{background:#f0883e;color:#0d1117}}
+.cf{position:fixed;top:55px;right:330px;width:400px;bottom:8px;background:#161b22;border:2px solid #58a6ff;border-radius:12px;z-index:200;display:none;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+.cf.show{display:flex}
+.cf .ch{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#1a2332;border-radius:10px 10px 0 0;border-bottom:1px solid #30363d}
+.cf .ch h3{color:#58a6ff;font-size:13px}
+.cf .ch button{background:#da3633;border:none;color:#fff;padding:3px 10px;border-radius:6px;cursor:pointer;font-size:11px}
+.cf .cm{flex:1;overflow-y:auto;padding:8px}
+.cf .mg{margin-bottom:8px;padding:6px 10px;border-radius:8px;font-size:12px;line-height:1.5;max-width:90%}
+.cf .mg.us{background:#1f3a5f;color:#e6edf3;margin-left:auto;border-bottom-right-radius:2px}
+.cf .mg.ia{background:#1b2838;color:#c9d1d9;margin-right:auto;border-bottom-left-radius:2px}
+.cf .mg .ml{font-size:9px;color:#8b949e;margin-bottom:2px}
+.cf .ci{display:flex;padding:6px;border-top:1px solid #30363d;gap:4px}
+.cf .ci input{flex:1;padding:7px 10px;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;font-size:12px}
+.cf .ci input:focus{outline:none;border-color:#58a6ff}
+.cf .ci button{padding:7px 12px;background:#238636;border:none;border-radius:6px;color:#fff;cursor:pointer;font-size:11px}
+.po{position:fixed;top:50px;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:50;display:none;justify-content:center;align-items:center}
+.po.show{display:flex}
+.pm{background:#161b22;border:2px solid #f0883e;border-radius:16px;padding:28px 40px;text-align:center}
+.pm h2{color:#f0883e;font-size:22px;margin-bottom:6px}
+.pm p{color:#8b949e;font-size:13px}
 </style>
 </head>
 <body>
-
 <div class="topbar">
-  <h1>🎓 Dashboard Professor</h1>
-  <select id="sel-aula" onchange="changeAula()">
-    <option value="1">Aula 1</option><option value="2">Aula 2</option>
-    <option value="3">Aula 3</option><option value="4">Aula 4</option>
-  </select>
-  <span id="aula-titulo" style="color:#8b949e;font-size:12px"></span>
-  <button class="btn btn-green" id="btn-start" onclick="toggleStart()">⏸ Iniciar Aula</button>
-  <button class="btn btn-green" onclick="nextActivity()">▶ Próximo</button>
-  <button class="btn" onclick="openBreakoutQR()">📱 QR Codes</button>
+  <h1>🎓</h1>
+  <select id="sel-aula" onchange="changeAula()"><option value="1">Aula 1</option><option value="2">Aula 2</option><option value="3">Aula 3</option><option value="4">Aula 4</option></select>
+  <span id="aula-titulo" style="color:#8b949e;font-size:11px"></span>
+  <button class="btn btn-orange" id="btn-pause" onclick="togglePause()">⏸ Pausar</button>
+  <button class="btn btn-start-init" id="btn-next" onclick="nextActivity()">▶ Iniciar Aula</button>
+  <button class="btn" onclick="openBreakoutQR()">📱 QR</button>
   <button class="btn" onclick="openChamada()">📋 Chamada</button>
-  <button class="btn" onclick="exportLog()">💾 Exportar Log</button>
-  <button class="btn btn-red" onclick="adjustTime(-5)" title="Atrasar 5 min">-5 min</button>
-  <button class="btn btn-green" onclick="adjustTime(+5)" title="Adiantar 5 min">+5 min</button>
-  <div class="drift-display" id="drift-display" title="Desvio de tempo acumulado">
-    <span class="drift-label">DESVIO</span>
-    <span class="drift-value" id="drift-value">0 min</span>
-  </div>
+  <button class="btn" onclick="exportLog()">💾 Export</button>
+  <button class="btn btn-red" onclick="adjustTime(-5)">-5m</button>
+  <button class="btn btn-green" onclick="adjustTime(+5)">+5m</button>
+  <div class="drift-box" id="drift-box"><span class="dl">DESVIO</span><span class="dv" id="drift-val">0 min</span></div>
   <div class="clock" id="clock">--:--:--</div>
 </div>
-
 <div class="left">
-  <div class="timer-box">
-    <div class="label">Tempo restante da atividade</div>
-    <div class="time" id="block-timer">--:--</div>
-    <div class="bloco-name" id="bloco-name">—</div>
-  </div>
-  <div class="activity-scroll">
-    <ul class="activity-list" id="activity-list"></ul>
-  </div>
+  <div class="timer-box"><div class="tl">Atividade</div><div class="tv stopped" id="block-timer">--:--</div><div class="bn" id="bloco-name">Aguardando início</div></div>
+  <div class="ascroll"><ul class="alist" id="activity-list"></ul></div>
 </div>
-
 <div class="center">
-  <div class="alert-box" id="alert-box"></div>
-  <div class="current-activity" id="current-activity">
-    <h2>Selecione uma aula para começar</h2>
-  </div>
-  <div class="next-up" id="next-up">
-    <h3>Próximo</h3>
-    <div id="next-desc">—</div>
-  </div>
-  <div class="shortcuts" id="shortcuts">
-    <button onclick="addLog('obs','📝 ')">📝 Observação</button>
-    <button onclick="addLog('pergunta','❓ Pergunta: ')">❓ Pergunta</button>
-    <button onclick="addLog('sistema','✅ Atividade concluída')">✅ Concluir</button>
-    <button class="btn-alert" id="btn-alert-toggle" onclick="toggleAlert()">🔔 Som: ON</button>
-  </div>
-  <div class="professor-embed">
-    <iframe src="professor.html" id="professor-iframe"></iframe>
-  </div>
+  <div class="ab" id="alert-box"></div>
+  <div class="cur" id="current-activity"><h2>Selecione a aula e clique "▶ Iniciar Aula"</h2></div>
+  <div class="nxt" id="next-up"><h3>Próximo</h3><div id="next-desc">—</div></div>
+  <div class="sc"><button onclick="addLog('obs','📝 ')">📝 Obs</button><button onclick="addLog('pergunta','❓ ')">❓ Pergunta</button><button onclick="addLog('sistema','✅ Concluído')">✅</button><button class="ba" id="btn-alert" onclick="toggleAlert()">🔔 ON</button></div>
+  <div class="pembed"><iframe src="professor.html" id="prof-iframe"></iframe></div>
 </div>
-
-<!-- Pausa overlay -->
-<div class="paused-overlay" id="paused-overlay">
-  <div class="paused-msg">
-    <h2>⏸ AULA PAUSADA</h2>
-    <p>Clique "▶ Retomar" na barra superior para continuar</p>
-  </div>
+<div class="po" id="paused-overlay"><div class="pm"><h2>⏸ AULA PAUSADA</h2><p>Clique "▶ Retomar" para continuar de onde parou</p></div></div>
+<div class="cf" id="chat-float">
+  <div class="ch"><h3>💬 Pergunta</h3><button onclick="closeChat()">✕ Fechar → Log</button></div>
+  <div class="cm" id="chat-msgs"></div>
+  <div class="ci"><input id="chat-input" placeholder="Réplica ou nova pergunta..." onkeydown="if(event.key==='Enter')sendChat()"><button onclick="sendChat()">→</button></div>
 </div>
-
-<!-- Chat flutuante para perguntas -->
-<div class="chat-float" id="chat-float">
-  <div class="chat-header">
-    <h3>💬 Pergunta do Aluno</h3>
-    <button onclick="closeChat()">✕ Fechar e salvar no Log</button>
-  </div>
-  <div class="chat-messages" id="chat-messages"></div>
-  <div class="chat-input-area">
-    <input id="chat-input" placeholder="Digite sua resposta ou réplica..." onkeydown="if(event.key==='Enter')sendChatMsg()">
-    <button onclick="sendChatMsg()">Enviar</button>
-  </div>
-</div>
-
 <div class="right">
-  <h3>📝 Log da Aula <span id="log-count" style="float:right;color:#484f58">0</span></h3>
-  <div class="log-area" id="log-area"></div>
-  <div class="log-input">
-    <input id="log-input" placeholder="Registrar nota, pergunta, observação..." onkeydown="if(event.key==='Enter')addLogFromInput()">
-    <button onclick="addLogFromInput()">+</button>
-  </div>
+  <h3>📝 Log <span id="log-count" style="float:right;color:#484f58">0</span></h3>
+  <div class="la" id="log-area"></div>
+  <div class="li"><input id="log-input" placeholder="Note algo ou digite pergunta com ?..." onkeydown="if(event.key==='Enter')addLogInput()"><button onclick="addLogInput()">+</button></div>
 </div>
-
-<!-- Chamada Modal -->
-<div class="modal-overlay" id="chamada-modal">
-  <div class="modal">
-    <h2>📋 Lista de Chamada</h2>
-    <p style="color:#8b949e;font-size:12px;margin-bottom:8px">Cole a lista de alunos (1 por linha). Marque os presentes.</p>
-    <textarea id="chamada-list" placeholder="João Silva&#10;Maria Santos&#10;Pedro Costa&#10;..."></textarea>
-    <div class="modal-btns">
-      <button class="cancel" onclick="closeChamada()">Fechar</button>
-      <button class="save" onclick="saveChamada()">Salvar no Log</button>
-    </div>
-  </div>
-</div>
+<div class="mo" id="chamada-modal"><div class="md"><h2>📋 Chamada</h2><textarea id="chamada-list" placeholder="Cole nomes (1 por linha)..."></textarea><div class="mb"><button class="cn" onclick="document.getElementById('chamada-modal').classList.remove('show')">Fechar</button><button class="sv" onclick="saveChamada()">Salvar</button></div></div></div>
 
 <script src="aula-data.js"></script>
 <script>
-let currentAula = 1;
-let currentActivityIdx = 0;
-let allActivities = [];
-let blockTimerInterval = null;
-let logEntries = [];
-let timeDriftMinutes = 0; // positive = ahead (adiantado), negative = behind (atrasado)
-let alertSoundEnabled = true;
-let isRunning = false;
-let isPaused = false;
+let aula=1, idx=0, all=[], timerInt=null, log=[], drift=0, snd=true, started=false, paused=false, timerRemaining=0, actStartTime=0;
 
-// Clock
-setInterval(() => {
-  document.getElementById("clock").textContent = new Date().toLocaleTimeString("pt-BR");
-}, 1000);
+setInterval(()=>{document.getElementById("clock").textContent=new Date().toLocaleTimeString("pt-BR")},1000);
 
-function changeAula() {
-  currentAula = parseInt(document.getElementById("sel-aula").value);
-  currentActivityIdx = 0;
-  loadAula();
+function changeAula(){aula=+document.getElementById("sel-aula").value;idx=0;started=false;paused=false;loadAula();}
+
+function loadAula(){
+  const d=AULA_DATA[aula];if(!d)return;
+  document.getElementById("aula-titulo").textContent=d.titulo;
+  all=[];d.blocos.forEach(b=>b.atividades.forEach(a=>all.push({...a,bNum:b.num,bTitle:b.titulo})));
+  renderList();showActivity();
+  document.getElementById("btn-next").textContent="▶ Iniciar Aula";
+  document.getElementById("btn-next").className="btn btn-start-init";
+  document.getElementById("block-timer").textContent="--:--";
+  document.getElementById("block-timer").className="tv stopped";
+  document.getElementById("bloco-name").textContent="Aguardando início";
+  if(timerInt){clearInterval(timerInt);timerInt=null;}
+  addLog("sistema",`📚 Aula ${aula}: ${d.titulo}`);
 }
 
-function loadAula() {
-  const aula = AULA_DATA[currentAula];
-  if (!aula) return;
-  document.getElementById("aula-titulo").textContent = aula.titulo;
-
-  // Flatten all activities across all blocks
-  allActivities = [];
-  aula.blocos.forEach(bloco => {
-    bloco.atividades.forEach(a => {
-      allActivities.push({ ...a, blocoNum: bloco.num, blocoTitulo: bloco.titulo, blocoFim: bloco.fim });
-    });
-  });
-
-  renderActivityList();
-  selectActivity(0);
-  addLog("sistema", `📚 Aula ${currentAula} carregada: ${aula.titulo}`);
-}
-
-function renderActivityList() {
-  const list = document.getElementById("activity-list");
-  let lastBloco = -1;
-  list.innerHTML = allActivities.map((a, i) => {
-    let header = "";
-    if (a.blocoNum !== lastBloco) {
-      lastBloco = a.blocoNum;
-      header = `<li style="padding:8px 4px;color:#58a6ff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;border-top:1px solid #30363d;margin-top:8px">${a.blocoTitulo}</li>`;
-    }
-    const cls = i === currentActivityIdx ? "active" : (i < currentActivityIdx ? "done" : "");
-    return header + `<li class="activity-item ${cls}" onclick="selectActivity(${i})">
-      <span class="time-badge">${a.tempo}</span>
-      <span class="tipo-tag tipo-${a.tipo}">${a.tipo}</span>
-      <span class="desc">${a.desc}</span>
-      <span class="dur">${a.dur}m</span>
-    </li>`;
+function renderList(){
+  const el=document.getElementById("activity-list");let lb=-1;
+  el.innerHTML=all.map((a,i)=>{
+    let h="";if(a.bNum!==lb){lb=a.bNum;h=`<li style="padding:6px 4px;color:#58a6ff;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;border-top:1px solid #30363d;margin-top:6px">${a.bTitle}</li>`;}
+    const c=i===idx?"act":(i<idx?"done":"");
+    return h+`<li class="ai ${c}" onclick="goTo(${i})"><span class="tb">${a.tempo}</span><span class="tt tt-${a.tipo}">${a.tipo}</span><span class="ds">${a.desc}</span><span class="dr">${a.dur}m</span></li>`;
   }).join("");
 }
 
-function selectActivity(idx) {
-  if (idx < 0 || idx >= allActivities.length) return;
-  currentActivityIdx = idx;
-  const a = allActivities[idx];
-  renderActivityList();
-
-  // Current activity
-  const cur = document.getElementById("current-activity");
-  cur.innerHTML = `
-    <h2><span class="tipo-tag tipo-${a.tipo}">${a.tipo}</span> ${a.tempo} (${a.dur} min)</h2>
-    <div class="big-desc">${a.desc}</div>
-    ${a.nota ? `<div class="nota">💡 ${a.nota}</div>` : ""}
-  `;
-
-  // Next up
-  const next = allActivities[idx + 1];
-  document.getElementById("next-desc").innerHTML = next
-    ? `<span class="tipo-tag tipo-${next.tipo}">${next.tipo}</span> ${next.tempo} — ${next.desc}`
-    : "Fim da aula!";
-
-  // Block timer
-  startBlockTimer(a);
-
-  // Alerts
-  checkAlerts(a);
-
-  // Scroll into view
-  const items = document.querySelectorAll(".activity-item");
-  if (items[idx]) items[idx].scrollIntoView({ behavior: "smooth", block: "center" });
-  saveState();
+function showActivity(){
+  if(idx<0||idx>=all.length)return;const a=all[idx];renderList();
+  document.getElementById("current-activity").innerHTML=`<h2><span class="tt tt-${a.tipo}">${a.tipo}</span> ${a.tempo} (${a.dur}m)</h2><div class="bd">${a.desc}</div>${a.nota?`<div class="nt">💡 ${a.nota}</div>`:""}`;
+  const n=all[idx+1];
+  document.getElementById("next-desc").innerHTML=n?`<span class="tt tt-${n.tipo}">${n.tipo}</span> ${n.tempo} — ${n.desc}`:"🏁 Fim da aula!";
+  document.querySelectorAll(".ai")[idx]?.scrollIntoView({behavior:"smooth",block:"center"});
+  if(a.tipo==="chamada")showAlertMsg("📋 FAZER CHAMADA AGORA!");
+  if(a.tipo==="avaliacao")showAlertMsg("⭐ PEDIR AVALIAÇÃO!");
+  if(a.tipo==="breakout_prep")showAlertMsg("📱 COMPARTILHAR QR CODES!");
+  if(a.tipo==="breakout")showAlertMsg("👥 BREAKOUT ROOMS NO TEAMS!");
+  if(a.tipo==="intervalo")showAlertMsg("☕ INTERVALO 10 min!");
+  save();
 }
 
-function nextActivity() {
-  if (currentActivityIdx < allActivities.length - 1) {
-    const prev = allActivities[currentActivityIdx];
-    addLog("sistema", `✅ ${prev.desc}`);
-    selectActivity(currentActivityIdx + 1);
+function nextActivity(){
+  if(!started){
+    // First click = start the class
+    started=true;actStartTime=Date.now();
+    document.getElementById("btn-next").textContent="▶ Próximo";
+    document.getElementById("btn-next").className="btn btn-green";
+    addLog("sistema","▶️ AULA INICIADA");
+    startTimer(all[idx]);showActivity();save();return;
   }
-}
-
-function startBlockTimer(activity) {
-  if (blockTimerInterval) clearInterval(blockTimerInterval);
-  const el = document.getElementById("block-timer");
-  const nameEl = document.getElementById("bloco-name");
-  nameEl.textContent = activity.blocoTitulo;
-
-  // Calculate remaining seconds for this activity
-  let remaining = activity.dur * 60;
-  const tick = () => {
-    if (remaining <= 0) { el.textContent = "00:00"; el.className = "time warning"; return; }
-    const m = Math.floor(remaining / 60);
-    const s = remaining % 60;
-    el.textContent = `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
-    el.className = remaining <= 60 ? "time warning" : "time";
-    if (remaining === 60) showAlert("⏱ 1 MINUTO restante!");
-    if (remaining === 300) showAlert("⏱ 5 MINUTOS restantes");
-    remaining--;
-  };
-  tick();
-  blockTimerInterval = setInterval(tick, 1000);
-}
-
-function checkAlerts(a) {
-  if (a.tipo === "chamada") showAlert("📋 FAZER CHAMADA AGORA!");
-  if (a.tipo === "avaliacao") showAlert("⭐ PEDIR AVALIAÇÃO AOS ALUNOS!");
-  if (a.tipo === "breakout_prep") showAlert("📱 COMPARTILHAR QR CODES NO CHAT DO TEAMS!");
-  if (a.tipo === "breakout") showAlert("👥 CRIAR BREAKOUT ROOMS NO TEAMS (4 grupos, 8 min)");
-  if (a.tipo === "intervalo") showAlert("☕ INTERVALO — 10 minutos. Faça chamada ao retornar!");
-}
-
-function showAlert(msg) {
-  const el = document.getElementById("alert-box");
-  el.textContent = msg;
-  el.classList.add("show");
-  triggerAlert();
-  setTimeout(() => el.classList.remove("show"), 15000);
-}
-
-function triggerAlert() {
-  const btn = document.getElementById("btn-alert-toggle");
-  if (alertSoundEnabled) {
-    // Play sound
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.frequency.value = 800; gain.gain.value = 0.3;
-      osc.start(); osc.stop(ctx.currentTime + 0.2);
-      setTimeout(() => { const o2 = ctx.createOscillator(); o2.connect(gain); o2.frequency.value = 1000; o2.start(); o2.stop(ctx.currentTime + 0.15); }, 250);
-    } catch(e) {}
-  } else {
-    // Silent mode: flash the button for 30 seconds
-    btn.classList.remove("flash");
-    void btn.offsetWidth; // force reflow
-    btn.classList.add("flash");
-    setTimeout(() => btn.classList.remove("flash"), 30000);
-  }
-}
-
-function toggleAlert() {
-  alertSoundEnabled = !alertSoundEnabled;
-  const btn = document.getElementById("btn-alert-toggle");
-  if (alertSoundEnabled) {
-    btn.textContent = "🔔 Som: ON";
-    btn.classList.remove("muted");
-  } else {
-    btn.textContent = "🔕 Som: OFF";
-    btn.classList.add("muted");
-  }
-  addLog("sistema", alertSoundEnabled ? "🔔 Alerta sonoro LIGADO" : "🔕 Alerta silencioso (botão pisca)");
-}
-
-// Log
-function addLog(type, text) {
-  const now = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-  logEntries.push({ time: now, type, text, ts: Date.now() });
-  const area = document.getElementById("log-area");
-  area.innerHTML += `<div class="log-entry log-${type}"><span class="log-time">${now}</span> <span class="log-text">${text}</span></div>`;
-  area.scrollTop = area.scrollHeight;
-  document.getElementById("log-count").textContent = logEntries.length;
-}
-
-function addLogFromInput() {
-  const input = document.getElementById("log-input");
-  const text = input.value.trim();
-  if (!text) return;
-  
-  // Detect question with ? → open chat float
-  if (text.includes("?")) {
-    addLog("pergunta", `❓ ${text}`);
-    openChat(text);
-    input.value = "";
-    return;
-  }
-  
-  const type = text.startsWith("❓") ? "pergunta" : text.startsWith("📝") ? "obs" : "obs";
-  addLog(type, text);
-  input.value = "";
-}
-
-// ===== CHAT FLUTUANTE =====
-let chatMessages = [];
-let currentQuestion = "";
-
-function openChat(question) {
-  currentQuestion = question;
-  chatMessages = [];
-  const el = document.getElementById("chat-float");
-  const msgs = document.getElementById("chat-messages");
-  
-  // Add the question as first message
-  chatMessages.push({ role: "aluno", text: question });
-  msgs.innerHTML = `<div class="chat-msg user"><div class="msg-label">❓ Pergunta do aluno</div>${escapeHtml(question)}</div>`;
-  
-  el.classList.add("show");
-  document.getElementById("chat-input").focus();
-  
-  // Auto-ask AI for the answer
-  askAI(question, msgs);
-}
-
-function sendChatMsg() {
-  const input = document.getElementById("chat-input");
-  const text = input.value.trim();
-  if (!text) return;
-  
-  const msgs = document.getElementById("chat-messages");
-  chatMessages.push({ role: "professor", text });
-  
-  const div = document.createElement("div");
-  div.className = "chat-msg user";
-  div.innerHTML = `<div class="msg-label">🎓 Você</div>${escapeHtml(text)}`;
-  msgs.appendChild(div);
-  msgs.scrollTop = msgs.scrollHeight;
-  input.value = "";
-  
-  // Call AI for response
-  askAI(text, msgs);
-}
-
-async function askAI(question, msgsEl) {
-  const loading = document.createElement("div");
-  loading.className = "chat-msg ai";
-  loading.innerHTML = `<div class="msg-label">🤖 IA</div><em>Pensando...</em>`;
-  msgsEl.appendChild(loading);
-  msgsEl.scrollTop = msgsEl.scrollHeight;
-
-  try {
-    const ctx = allActivities[currentActivityIdx]?.desc || "";
-    const r = await fetch("/api/ai-chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question, context: ctx })
-    });
-    const data = await r.json();
-    loading.innerHTML = `<div class="msg-label">🤖 IA (${data.source || ""})</div>${escapeHtml(data.answer)}`;
-    chatMessages.push({ role: "ia", text: data.answer });
-  } catch(e) {
-    loading.innerHTML = `<div class="msg-label">🤖 IA</div><em>Erro de conexão. Tente novamente.</em>`;
-  }
-  msgsEl.scrollTop = msgsEl.scrollHeight;
-}
-
-function closeChat() {
-  const el = document.getElementById("chat-float");
-  el.classList.remove("show");
-  
-  // Save entire conversation to log
-  if (chatMessages.length > 0) {
-    addLog("pergunta", `💬 Chat sobre: "${currentQuestion}"`);
-    chatMessages.forEach(m => {
-      if (m.role === "aluno") addLog("pergunta", `  ❓ Aluno: ${m.text}`);
-      else if (m.role === "ia") addLog("obs", `  🤖 IA: ${m.text}`);
-      else addLog("obs", `  🎓 Prof: ${m.text}`);
-    });
-    addLog("sistema", `💬 Chat encerrado (${chatMessages.length} mensagens)`);
-  }
-  chatMessages = [];
-  currentQuestion = "";
-}
-
-function escapeHtml(text) {
-  return text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>");
-}
-
-// Chamada
-function openChamada() { document.getElementById("chamada-modal").classList.add("show"); }
-function closeChamada() { document.getElementById("chamada-modal").classList.remove("show"); }
-function saveChamada() {
-  const list = document.getElementById("chamada-list").value.trim();
-  if (!list) return;
-  const names = list.split("\n").filter(n => n.trim());
-  addLog("chamada", `📋 Chamada: ${names.length} aluno(s) registrado(s)`);
-  names.forEach(n => addLog("chamada", `  ✓ ${n.trim()}`));
-  closeChamada();
-}
-
-// QR Codes
-function openBreakoutQR() {
-  const a = allActivities[currentActivityIdx];
-  let bloco = 1;
-  // Find the current block number for breakout
-  for (let i = currentActivityIdx; i >= 0; i--) {
-    if (allActivities[i].blocoNum > 0) { bloco = allActivities[i].blocoNum; break; }
-  }
-  window.open(`qrcodes.html?aula=${currentAula}&bloco=${bloco}`, "_blank");
-}
-
-// Export log
-function exportLog() {
-  const aula = AULA_DATA[currentAula];
-  let text = `LOG DA AULA ${currentAula}\n${aula?.titulo || ""}\nData: ${new Date().toLocaleDateString("pt-BR")}\n${"=".repeat(60)}\n\n`;
-  logEntries.forEach(e => { text += `[${e.time}] ${e.text}\n`; });
-  text += `\n${"=".repeat(60)}\nTotal de registros: ${logEntries.length}\n`;
-
-  const blob = new Blob([text], { type: "text/plain" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `log_aula${currentAula}_${new Date().toISOString().slice(0,10)}.txt`;
-  a.click();
-  addLog("sistema", "💾 Log exportado");
-}
-
-// Time drift adjustment
-function adjustTime(minutes) {
-  timeDriftMinutes += minutes;
-  updateDriftDisplay();
-  // Adjust current timer
-  if (blockTimerInterval) {
-    // Add/remove seconds to the running timer
-    const el = document.getElementById("block-timer");
-    const parts = el.textContent.split(":");
-    if (parts.length === 2) {
-      let totalSec = parseInt(parts[0]) * 60 + parseInt(parts[1]);
-      totalSec += minutes * 60;
-      if (totalSec < 0) totalSec = 0;
-      // Restart timer with adjusted time
-      clearInterval(blockTimerInterval);
-      let remaining = totalSec;
-      const tick = () => {
-        if (remaining <= 0) { el.textContent = "00:00"; el.className = "time warning"; return; }
-        const m = Math.floor(remaining / 60);
-        const s = remaining % 60;
-        el.textContent = `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
-        el.className = remaining <= 60 ? "time warning" : "time";
-        if (remaining === 60) showAlert("⏱ 1 MINUTO restante!");
-        if (remaining === 300) showAlert("⏱ 5 MINUTOS restantes");
-        remaining--;
-      };
-      tick();
-      blockTimerInterval = setInterval(tick, 1000);
+  if(paused)return;
+  if(idx<all.length-1){
+    // Calculate drift: how much time was actually spent vs planned
+    if(actStartTime>0){
+      const spent=Math.round((Date.now()-actStartTime)/60000);
+      const planned=all[idx].dur;
+      drift+=(spent-planned);
+      updateDrift();
     }
-  }
-  const direction = minutes > 0 ? "Adiantou" : "Atrasou";
-  addLog("sistema", `⏱ ${direction} ${Math.abs(minutes)} min | Desvio total: ${formatDrift(timeDriftMinutes)}`);
-}
-
-function updateDriftDisplay() {
-  const el = document.getElementById("drift-display");
-  const val = document.getElementById("drift-value");
-  val.textContent = formatDrift(timeDriftMinutes);
-  el.classList.remove("behind", "ahead", "drifting");
-  if (timeDriftMinutes === 0) {
-    val.style.color = "#2ea043"; // green = on time
-  } else if (timeDriftMinutes < 0) {
-    el.classList.add("behind", "drifting");
-  } else {
-    el.classList.add("ahead", "drifting");
+    addLog("sistema",`✅ ${all[idx].desc}`);
+    idx++;actStartTime=Date.now();
+    showActivity();startTimer(all[idx]);
   }
 }
 
-function formatDrift(min) {
-  if (min === 0) return "0 min";
-  const sign = min > 0 ? "+" : "";
-  return `${sign}${min} min`;
+function goTo(i){if(i>=0&&i<all.length){idx=i;showActivity();if(started&&!paused)startTimer(all[idx]);actStartTime=Date.now();}}
+
+function startTimer(a){
+  if(timerInt)clearInterval(timerInt);
+  const el=document.getElementById("block-timer");
+  document.getElementById("bloco-name").textContent=a.bTitle;
+  timerRemaining=a.dur*60;
+  const tick=()=>{
+    if(timerRemaining<=0){el.textContent="00:00";el.className="tv warn";return;}
+    const m=Math.floor(timerRemaining/60),s=timerRemaining%60;
+    el.textContent=`${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+    el.className=timerRemaining<=60?"tv warn":"tv";
+    if(timerRemaining===60)showAlertMsg("⏱ 1 MINUTO!");
+    if(timerRemaining===300)showAlertMsg("⏱ 5 MINUTOS!");
+    timerRemaining--;
+  };tick();timerInt=setInterval(tick,1000);
 }
 
-// ===== START / PAUSE =====
-function toggleStart() {
-  const btn = document.getElementById("btn-start");
-  const overlay = document.getElementById("paused-overlay");
-  
-  if (!isRunning) {
-    // Start
-    isRunning = true;
-    isPaused = false;
-    btn.textContent = "⏸ Pausar";
-    btn.className = "btn btn-pause";
-    overlay.classList.remove("show");
-    addLog("sistema", "▶️ AULA INICIADA");
-    startBlockTimer(allActivities[currentActivityIdx]);
-    saveState();
-  } else if (!isPaused) {
-    // Pause
-    isPaused = true;
-    btn.textContent = "▶ Retomar";
-    btn.className = "btn btn-running";
-    overlay.classList.add("show");
-    if (blockTimerInterval) clearInterval(blockTimerInterval);
-    addLog("sistema", "⏸ AULA PAUSADA");
-    saveState();
-  } else {
-    // Resume
-    isPaused = false;
-    btn.textContent = "⏸ Pausar";
-    btn.className = "btn btn-pause";
-    overlay.classList.remove("show");
-    addLog("sistema", "▶️ AULA RETOMADA");
-    startBlockTimer(allActivities[currentActivityIdx]);
-    saveState();
+function togglePause(){
+  if(!started)return;
+  const btn=document.getElementById("btn-pause"),ov=document.getElementById("paused-overlay");
+  if(!paused){
+    paused=true;btn.textContent="▶ Retomar";btn.className="btn btn-green";
+    ov.classList.add("show");
+    if(timerInt)clearInterval(timerInt);timerInt=null;
+    addLog("sistema","⏸ PAUSADA");save();
+  }else{
+    paused=false;btn.textContent="⏸ Pausar";btn.className="btn btn-orange";
+    ov.classList.remove("show");
+    // Resume timer from where it stopped
+    const el=document.getElementById("block-timer");
+    const tick=()=>{
+      if(timerRemaining<=0){el.textContent="00:00";el.className="tv warn";return;}
+      const m=Math.floor(timerRemaining/60),s=timerRemaining%60;
+      el.textContent=`${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+      el.className=timerRemaining<=60?"tv warn":"tv";
+      if(timerRemaining===60)showAlertMsg("⏱ 1 MINUTO!");
+      timerRemaining--;
+    };tick();timerInt=setInterval(tick,1000);
+    addLog("sistema","▶️ RETOMADA");save();
   }
 }
 
-// ===== PERSISTÊNCIA — salvar/restaurar estado =====
-function saveState() {
-  const state = {
-    aula: currentAula,
-    activityIdx: currentActivityIdx,
-    drift: timeDriftMinutes,
-    running: isRunning,
-    paused: isPaused,
-    alertSound: alertSoundEnabled,
-    log: logEntries,
-    ts: Date.now()
-  };
-  try { localStorage.setItem("dashboard_state", JSON.stringify(state)); } catch(e) {}
+function adjustTime(min){
+  drift+=min;timerRemaining+=min*60;if(timerRemaining<0)timerRemaining=0;
+  updateDrift();addLog("sistema",`⏱ Ajuste ${min>0?"+":""}${min}m | Desvio: ${fmtDrift(drift)}`);
 }
 
-function restoreState() {
-  try {
-    const raw = localStorage.getItem("dashboard_state");
-    if (!raw) return false;
-    const state = JSON.parse(raw);
-    // Only restore if less than 6 hours old
-    if (Date.now() - state.ts > 6 * 60 * 60 * 1000) { localStorage.removeItem("dashboard_state"); return false; }
-    
-    currentAula = state.aula || 1;
-    document.getElementById("sel-aula").value = currentAula;
-    timeDriftMinutes = state.drift || 0;
-    alertSoundEnabled = state.alertSound !== false;
-    
-    loadAula();
-    
-    // Restore activity position
-    if (state.activityIdx > 0 && state.activityIdx < allActivities.length) {
-      selectActivity(state.activityIdx);
-    }
-    
-    // Restore log
-    if (state.log && state.log.length > 0) {
-      const area = document.getElementById("log-area");
-      state.log.forEach(e => {
-        logEntries.push(e);
-        area.innerHTML += `<div class="log-entry log-${e.type}"><span class="log-time">${e.time}</span> <span class="log-text">${e.text}</span></div>`;
-      });
-      document.getElementById("log-count").textContent = logEntries.length;
-      area.scrollTop = area.scrollHeight;
-    }
-    
-    // Restore running state
-    if (state.running) {
-      isRunning = true;
-      isPaused = state.paused;
-      const btn = document.getElementById("btn-start");
-      if (isPaused) {
-        btn.textContent = "▶ Retomar";
-        btn.className = "btn btn-running";
-        document.getElementById("paused-overlay").classList.add("show");
-      } else {
-        btn.textContent = "⏸ Pausar";
-        btn.className = "btn btn-pause";
-        startBlockTimer(allActivities[currentActivityIdx]);
-      }
-    }
-    
-    updateDriftDisplay();
-    if (!alertSoundEnabled) {
-      const abtn = document.getElementById("btn-alert-toggle");
-      abtn.textContent = "🔕 Som: OFF";
-      abtn.classList.add("muted");
-    }
-    
-    addLog("sistema", "🔄 Estado restaurado — continuando de onde parou");
-    return true;
-  } catch(e) { return false; }
+function updateDrift(){
+  const el=document.getElementById("drift-box"),v=document.getElementById("drift-val");
+  v.textContent=fmtDrift(drift);
+  el.classList.toggle("off",drift!==0);
+  v.style.color=drift===0?"#2ea043":(drift<0?"#f85149":"#58a6ff");
+}
+function fmtDrift(m){return m===0?"0 min":`${m>0?"+":""}${m} min`;}
+
+function showAlertMsg(msg){
+  const el=document.getElementById("alert-box");el.textContent=msg;el.classList.add("show");
+  fireAlert();setTimeout(()=>el.classList.remove("show"),12000);
+}
+function fireAlert(){
+  const b=document.getElementById("btn-alert");
+  if(snd){try{const c=new(window.AudioContext||window.webkitAudioContext)(),o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.frequency.value=800;g.gain.value=.3;o.start();o.stop(c.currentTime+.2);}catch(e){}}
+  else{b.classList.remove("fl");void b.offsetWidth;b.classList.add("fl");setTimeout(()=>b.classList.remove("fl"),30000);}
+}
+function toggleAlert(){snd=!snd;const b=document.getElementById("btn-alert");b.textContent=snd?"🔔 ON":"🔕 OFF";b.classList.toggle("mt",!snd);}
+
+// LOG
+function addLog(t,x){const now=new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});log.push({time:now,type:t,text:x,ts:Date.now()});const a=document.getElementById("log-area");a.innerHTML+=`<div class="le log-${t}"><span class="lt">${now}</span> <span class="lx">${x}</span></div>`;a.scrollTop=a.scrollHeight;document.getElementById("log-count").textContent=log.length;}
+
+function addLogInput(){
+  const inp=document.getElementById("log-input"),t=inp.value.trim();if(!t)return;
+  if(t.includes("?")){addLog("pergunta",`❓ ${t}`);openChat(t);inp.value="";return;}
+  addLog(t.startsWith("📝")?"obs":"obs",t);inp.value="";
 }
 
-// Auto-save every 30 seconds
-setInterval(saveState, 30000);
+// CHAT with AI
+let chatMsgs=[],chatQ="";
+function openChat(q){
+  chatQ=q;chatMsgs=[];const el=document.getElementById("chat-float"),m=document.getElementById("chat-msgs");
+  chatMsgs.push({r:"aluno",t:q});
+  m.innerHTML=`<div class="mg us"><div class="ml">❓ Pergunta</div>${esc(q)}</div>`;
+  el.classList.add("show");document.getElementById("chat-input").focus();
+  askAI(q,m);
+}
+function sendChat(){
+  const inp=document.getElementById("chat-input"),t=inp.value.trim();if(!t)return;
+  const m=document.getElementById("chat-msgs");chatMsgs.push({r:"prof",t});
+  m.innerHTML+=`<div class="mg us"><div class="ml">🎓 Você</div>${esc(t)}</div>`;m.scrollTop=m.scrollHeight;inp.value="";
+  askAI(t,m);
+}
+async function askAI(q,el){
+  const ld=document.createElement("div");ld.className="mg ia";ld.innerHTML=`<div class="ml">🤖 IA</div><em>Pensando...</em>`;el.appendChild(ld);el.scrollTop=el.scrollHeight;
+  try{
+    const ctx=`Aula ${aula}. Atividade: ${all[idx]?.desc||""}`;
+    const r=await fetch("/api/ai-chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q,context:ctx,aula})});
+    const d=await r.json();ld.innerHTML=`<div class="ml">🤖 IA</div>${esc(d.answer)}`;chatMsgs.push({r:"ia",t:d.answer});
+  }catch(e){ld.innerHTML=`<div class="ml">🤖 IA</div><em>Erro. Tente novamente.</em>`;}
+  el.scrollTop=el.scrollHeight;
+}
+function closeChat(){
+  document.getElementById("chat-float").classList.remove("show");
+  if(chatMsgs.length>0){
+    addLog("pergunta",`💬 "${chatQ}"`);
+    chatMsgs.forEach(m=>{if(m.r==="aluno")addLog("pergunta",`  ❓ ${m.t}`);else if(m.r==="ia")addLog("obs",`  🤖 ${m.t}`);else addLog("obs",`  🎓 ${m.t}`);});
+    addLog("sistema",`💬 Chat encerrado (${chatMsgs.length} msg)`);
+  }
+  chatMsgs=[];chatQ="";
+  // Focus back to log input
+  document.getElementById("log-input").focus();
+}
+function esc(t){return(t||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>");}
 
-// Keyboard shortcuts
-document.addEventListener("keydown", (e) => {
-  if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
-  if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); nextActivity(); }
-  if (e.key === "ArrowLeft") { e.preventDefault(); selectActivity(currentActivityIdx - 1); }
-  if (e.key === "q") openBreakoutQR();
-  if (e.key === "c") openChamada();
-  if (e.key === "e") exportLog();
-});
+// CHAMADA
+function openChamada(){document.getElementById("chamada-modal").classList.add("show");}
+function saveChamada(){const l=document.getElementById("chamada-list").value.trim();if(!l)return;const n=l.split("\n").filter(x=>x.trim());addLog("chamada",`📋 ${n.length} aluno(s)`);n.forEach(x=>addLog("chamada",`  ✓ ${x.trim()}`));document.getElementById("chamada-modal").classList.remove("show");}
 
-// Init — try restore, otherwise fresh start
-if (!restoreState()) {
+function openBreakoutQR(){let b=1;for(let i=idx;i>=0;i--)if(all[i].bNum>0){b=all[i].bNum;break;}window.open(`qrcodes.html?aula=${aula}&bloco=${b}`,"_blank");}
+
+function exportLog(){const d=AULA_DATA[aula];let t=`LOG AULA ${aula}\n${d?.titulo||""}\n${new Date().toLocaleDateString("pt-BR")}\n${"=".repeat(50)}\n\n`;log.forEach(e=>t+=`[${e.time}] ${e.text}\n`);t+=`\n${"=".repeat(50)}\n${log.length} registros | Desvio: ${fmtDrift(drift)}\n`;const b=new Blob([t],{type:"text/plain"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`log_aula${aula}_${new Date().toISOString().slice(0,10)}.txt`;a.click();addLog("sistema","💾 Exportado");}
+
+// PERSISTENCIA
+function save(){try{localStorage.setItem("ds",JSON.stringify({a:aula,i:idx,d:drift,st:started,pa:paused,sn:snd,lg:log,tr:timerRemaining,ts:Date.now()}));}catch(e){}}
+
+function restore(){
+  try{const r=localStorage.getItem("ds");if(!r)return false;const s=JSON.parse(r);
+  if(Date.now()-s.ts>6*3600000){localStorage.removeItem("ds");return false;}
+  aula=s.a||1;document.getElementById("sel-aula").value=aula;drift=s.d||0;snd=s.sn!==false;started=s.st;paused=s.pa;timerRemaining=s.tr||0;
   loadAula();
-  addLog("sistema", "🚀 Dashboard iniciado. Atalhos: → Próximo | ← Anterior | Q=QR | C=Chamada | E=Exportar | Espaço=Iniciar/Pausar");
+  if(s.i>0&&s.i<all.length){idx=s.i;showActivity();}
+  if(s.lg?.length>0){const a=document.getElementById("log-area");s.lg.forEach(e=>{log.push(e);a.innerHTML+=`<div class="le log-${e.type}"><span class="lt">${e.time}</span> <span class="lx">${e.text}</span></div>`;});document.getElementById("log-count").textContent=log.length;a.scrollTop=a.scrollHeight;}
+  if(started){
+    document.getElementById("btn-next").textContent="▶ Próximo";document.getElementById("btn-next").className="btn btn-green";
+    if(paused){document.getElementById("btn-pause").textContent="▶ Retomar";document.getElementById("btn-pause").className="btn btn-green";document.getElementById("paused-overlay").classList.add("show");}
+    else if(timerRemaining>0){
+      // Resume timer from saved remaining
+      const el=document.getElementById("block-timer");document.getElementById("bloco-name").textContent=all[idx]?.bTitle||"";
+      const tick=()=>{if(timerRemaining<=0){el.textContent="00:00";el.className="tv warn";return;}const m=Math.floor(timerRemaining/60),ss=timerRemaining%60;el.textContent=`${String(m).padStart(2,"0")}:${String(ss).padStart(2,"0")}`;el.className=timerRemaining<=60?"tv warn":"tv";timerRemaining--;};tick();timerInt=setInterval(tick,1000);
+    }
+    actStartTime=Date.now();
+  }
+  updateDrift();if(!snd){const b=document.getElementById("btn-alert");b.textContent="🔕 OFF";b.classList.add("mt");}
+  addLog("sistema","🔄 Restaurado — continuando de onde parou");return true;}catch(e){return false;}
 }
+
+setInterval(save,30000);
+
+document.addEventListener("keydown",e=>{if(e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA")return;if(e.key==="ArrowRight"){e.preventDefault();nextActivity();}if(e.key==="ArrowLeft"){e.preventDefault();goTo(idx-1);}if(e.key===" "){e.preventDefault();togglePause();}if(e.key==="q")openBreakoutQR();if(e.key==="c")openChamada();if(e.key==="e")exportLog();});
+
+if(!restore()){loadAula();addLog("sistema","🚀 Pronto. Clique ▶ Iniciar Aula para começar. Atalhos: →=Próximo ←=Anterior Espaço=Pausar");}
 </script>
 </body>
 </html>
