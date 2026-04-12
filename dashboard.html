@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard Professor — MBA FIAP 2026</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#e6edf3;height:100vh;overflow:hidden;display:grid;grid-template-columns:280px 1fr 320px;grid-template-rows:50px 1fr}
+/* Top bar */
+.topbar{grid-column:1/-1;background:#161b22;border-bottom:1px solid #30363d;display:flex;align-items:center;padding:0 16px;gap:12px}
+.topbar h1{font-size:14px;color:#58a6ff;white-space:nowrap}
+.topbar select{padding:4px 8px;background:#21262d;border:1px solid #30363d;color:#e6edf3;border-radius:6px;font-size:13px}
+.topbar .clock{margin-left:auto;font-size:24px;font-weight:700;color:#f0883e;font-variant-numeric:tabular-nums}
+.topbar .btn{padding:4px 12px;border-radius:6px;border:1px solid #30363d;background:#21262d;color:#e6edf3;font-size:12px;cursor:pointer}
+.topbar .btn-green{background:#238636;border-color:#238636}
+.topbar .btn-red{background:#da3633;border-color:#da3633}
+/* Left: Timer + Roteiro */
+.left{background:#0d1117;border-right:1px solid #30363d;overflow-y:auto;padding:12px}
+.timer-box{text-align:center;padding:16px 8px;background:#161b22;border-radius:12px;margin-bottom:12px;border:1px solid #30363d}
+.timer-box .label{font-size:11px;color:#8b949e;text-transform:uppercase;letter-spacing:1px}
+.timer-box .time{font-size:48px;font-weight:700;font-variant-numeric:tabular-nums;color:#f0883e}
+.timer-box .time.warning{color:#f85149;animation:pulse 1s infinite}
+.timer-box .bloco-name{font-size:13px;color:#58a6ff;margin-top:4px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.activity-list{list-style:none}
+.activity-item{padding:8px 10px;border-radius:8px;margin-bottom:4px;font-size:12px;display:flex;gap:8px;align-items:flex-start;cursor:pointer;border:1px solid transparent}
+.activity-item:hover{background:#161b22}
+.activity-item.active{background:#1a2332;border-color:#1f6feb}
+.activity-item.done{opacity:.5}
+.activity-item .time-badge{flex-shrink:0;color:#8b949e;font-variant-numeric:tabular-nums;width:40px}
+.activity-item .dur{color:#484f58;font-size:10px}
+.activity-item .desc{flex:1;color:#c9d1d9}
+.tipo-tag{font-size:9px;padding:1px 5px;border-radius:4px;font-weight:600;text-transform:uppercase}
+.tipo-exposicao{background:#1a237e;color:#64b5f6}
+.tipo-dinamica{background:#1b4332;color:#2ecc71}
+.tipo-quiz{background:#4a148c;color:#ce93d8}
+.tipo-enquete{background:#0d47a1;color:#42a5f5}
+.tipo-video{background:#8b0000;color:#ff6b6b}
+.tipo-breakout,.tipo-breakout_prep{background:#7b2d8e;color:#ce93d8}
+.tipo-debate{background:#7b2d8e;color:#e1bee7}
+.tipo-intervalo{background:#1b3a2d;color:#81c784}
+.tipo-chamada{background:#bf360c;color:#ff8a65}
+.tipo-avaliacao{background:#f9a825;color:#0d1117}
+.tipo-transicao{background:#21262d;color:#8b949e}
+.tipo-ia{background:#311b92;color:#b39ddb}
+/* Center: Main area */
+.center{overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.current-activity{background:#161b22;border:2px solid #1f6feb;border-radius:12px;padding:16px}
+.current-activity h2{color:#58a6ff;font-size:16px;margin-bottom:4px}
+.current-activity .big-desc{font-size:20px;color:#fff;margin:8px 0}
+.current-activity .nota{color:#f0883e;font-size:13px;padding:8px 12px;background:#1a1500;border-radius:8px;margin-top:8px}
+.next-up{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:12px}
+.next-up h3{color:#8b949e;font-size:12px;margin-bottom:8px;text-transform:uppercase}
+.alert-box{background:#3d1d00;border:1px solid #f0883e;border-radius:8px;padding:10px 14px;color:#f0883e;font-weight:600;font-size:14px;display:none}
+.alert-box.show{display:block}
+.shortcuts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.shortcuts button{padding:6px 14px;border-radius:8px;border:1px solid #30363d;background:#21262d;color:#e6edf3;font-size:12px;cursor:pointer}
+.shortcuts button:hover{background:#30363d}
+/* Right: Log */
+.right{background:#0d1117;border-left:1px solid #30363d;display:flex;flex-direction:column}
+.right h3{padding:12px;font-size:13px;color:#8b949e;border-bottom:1px solid #30363d;text-transform:uppercase;letter-spacing:1px}
+.log-area{flex:1;overflow-y:auto;padding:8px}
+.log-entry{padding:6px 8px;font-size:12px;border-bottom:1px solid #161b22}
+.log-entry .log-time{color:#484f58;font-size:10px}
+.log-entry .log-text{color:#c9d1d9}
+.log-entry.log-chamada{border-left:3px solid #ff8a65}
+.log-entry.log-pergunta{border-left:3px solid #58a6ff}
+.log-entry.log-obs{border-left:3px solid #f0883e}
+.log-entry.log-sistema{border-left:3px solid #484f58;color:#8b949e}
+.log-input{display:flex;border-top:1px solid #30363d;padding:8px}
+.log-input input{flex:1;padding:8px;background:#161b22;border:1px solid #30363d;border-radius:6px;color:#e6edf3;font-size:13px}
+.log-input input:focus{outline:none;border-color:#58a6ff}
+.log-input button{padding:8px 12px;background:#238636;border:none;border-radius:6px;color:#fff;cursor:pointer;margin-left:6px;font-size:12px}
+/* Chamada modal */
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);display:none;justify-content:center;align-items:center;z-index:100}
+.modal-overlay.show{display:flex}
+.modal{background:#161b22;border:1px solid #30363d;border-radius:16px;padding:24px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto}
+.modal h2{color:#58a6ff;margin-bottom:16px}
+.modal textarea{width:100%;height:200px;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#e6edf3;padding:12px;font-size:13px;font-family:inherit;resize:vertical}
+.modal .modal-btns{display:flex;gap:8px;margin-top:12px}
+.modal .modal-btns button{flex:1;padding:10px;border-radius:8px;border:none;font-size:14px;cursor:pointer;font-weight:600}
+.modal .modal-btns .save{background:#238636;color:#fff}
+.modal .modal-btns .cancel{background:#21262d;color:#e6edf3;border:1px solid #30363d}
+/* Audio alert */
+.hidden{display:none}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>🎓 Dashboard Professor</h1>
+  <select id="sel-aula" onchange="changeAula()">
+    <option value="1">Aula 1</option><option value="2">Aula 2</option>
+    <option value="3">Aula 3</option><option value="4">Aula 4</option>
+  </select>
+  <span id="aula-titulo" style="color:#8b949e;font-size:12px"></span>
+  <button class="btn btn-green" onclick="nextActivity()">▶ Próximo</button>
+  <button class="btn" onclick="openBreakoutQR()">📱 QR Codes</button>
+  <button class="btn" onclick="openChamada()">📋 Chamada</button>
+  <button class="btn" onclick="exportLog()">💾 Exportar Log</button>
+  <div class="clock" id="clock">--:--:--</div>
+</div>
+
+<div class="left">
+  <div class="timer-box">
+    <div class="label">Tempo restante do bloco</div>
+    <div class="time" id="block-timer">--:--</div>
+    <div class="bloco-name" id="bloco-name">—</div>
+  </div>
+  <ul class="activity-list" id="activity-list"></ul>
+</div>
+
+<div class="center">
+  <div class="alert-box" id="alert-box"></div>
+  <div class="current-activity" id="current-activity">
+    <h2>Selecione uma aula para começar</h2>
+  </div>
+  <div class="next-up" id="next-up">
+    <h3>Próximo</h3>
+    <div id="next-desc">—</div>
+  </div>
+  <div class="shortcuts" id="shortcuts">
+    <button onclick="addLog('obs','📝 ')">📝 Observação</button>
+    <button onclick="addLog('pergunta','❓ Pergunta: ')">❓ Pergunta</button>
+    <button onclick="addLog('sistema','✅ Atividade concluída')">✅ Concluir</button>
+    <button onclick="playAlert()">🔔 Alerta sonoro</button>
+  </div>
+</div>
+
+<div class="right">
+  <h3>📝 Log da Aula <span id="log-count" style="float:right;color:#484f58">0</span></h3>
+  <div class="log-area" id="log-area"></div>
+  <div class="log-input">
+    <input id="log-input" placeholder="Registrar nota, pergunta, observação..." onkeydown="if(event.key==='Enter')addLogFromInput()">
+    <button onclick="addLogFromInput()">+</button>
+  </div>
+</div>
+
+<!-- Chamada Modal -->
+<div class="modal-overlay" id="chamada-modal">
+  <div class="modal">
+    <h2>📋 Lista de Chamada</h2>
+    <p style="color:#8b949e;font-size:12px;margin-bottom:8px">Cole a lista de alunos (1 por linha). Marque os presentes.</p>
+    <textarea id="chamada-list" placeholder="João Silva&#10;Maria Santos&#10;Pedro Costa&#10;..."></textarea>
+    <div class="modal-btns">
+      <button class="cancel" onclick="closeChamada()">Fechar</button>
+      <button class="save" onclick="saveChamada()">Salvar no Log</button>
+    </div>
+  </div>
+</div>
+
+<script src="aula-data.js"></script>
+<script>
+let currentAula = 1;
+let currentActivityIdx = 0;
+let allActivities = [];
+let blockTimerInterval = null;
+let logEntries = [];
+
+// Clock
+setInterval(() => {
+  document.getElementById("clock").textContent = new Date().toLocaleTimeString("pt-BR");
+}, 1000);
+
+function changeAula() {
+  currentAula = parseInt(document.getElementById("sel-aula").value);
+  currentActivityIdx = 0;
+  loadAula();
+}
+
+function loadAula() {
+  const aula = AULA_DATA[currentAula];
+  if (!aula) return;
+  document.getElementById("aula-titulo").textContent = aula.titulo;
+
+  // Flatten all activities across all blocks
+  allActivities = [];
+  aula.blocos.forEach(bloco => {
+    bloco.atividades.forEach(a => {
+      allActivities.push({ ...a, blocoNum: bloco.num, blocoTitulo: bloco.titulo, blocoFim: bloco.fim });
+    });
+  });
+
+  renderActivityList();
+  selectActivity(0);
+  addLog("sistema", `📚 Aula ${currentAula} carregada: ${aula.titulo}`);
+}
+
+function renderActivityList() {
+  const list = document.getElementById("activity-list");
+  let lastBloco = -1;
+  list.innerHTML = allActivities.map((a, i) => {
+    let header = "";
+    if (a.blocoNum !== lastBloco) {
+      lastBloco = a.blocoNum;
+      header = `<li style="padding:8px 4px;color:#58a6ff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;border-top:1px solid #30363d;margin-top:8px">${a.blocoTitulo}</li>`;
+    }
+    const cls = i === currentActivityIdx ? "active" : (i < currentActivityIdx ? "done" : "");
+    return header + `<li class="activity-item ${cls}" onclick="selectActivity(${i})">
+      <span class="time-badge">${a.tempo}</span>
+      <span class="tipo-tag tipo-${a.tipo}">${a.tipo}</span>
+      <span class="desc">${a.desc}</span>
+      <span class="dur">${a.dur}m</span>
+    </li>`;
+  }).join("");
+}
+
+function selectActivity(idx) {
+  if (idx < 0 || idx >= allActivities.length) return;
+  currentActivityIdx = idx;
+  const a = allActivities[idx];
+  renderActivityList();
+
+  // Current activity
+  const cur = document.getElementById("current-activity");
+  cur.innerHTML = `
+    <h2><span class="tipo-tag tipo-${a.tipo}">${a.tipo}</span> ${a.tempo} (${a.dur} min)</h2>
+    <div class="big-desc">${a.desc}</div>
+    ${a.nota ? `<div class="nota">💡 ${a.nota}</div>` : ""}
+  `;
+
+  // Next up
+  const next = allActivities[idx + 1];
+  document.getElementById("next-desc").innerHTML = next
+    ? `<span class="tipo-tag tipo-${next.tipo}">${next.tipo}</span> ${next.tempo} — ${next.desc}`
+    : "Fim da aula!";
+
+  // Block timer
+  startBlockTimer(a);
+
+  // Alerts
+  checkAlerts(a);
+
+  // Scroll into view
+  const items = document.querySelectorAll(".activity-item");
+  if (items[idx]) items[idx].scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function nextActivity() {
+  if (currentActivityIdx < allActivities.length - 1) {
+    const prev = allActivities[currentActivityIdx];
+    addLog("sistema", `✅ ${prev.desc}`);
+    selectActivity(currentActivityIdx + 1);
+  }
+}
+
+function startBlockTimer(activity) {
+  if (blockTimerInterval) clearInterval(blockTimerInterval);
+  const el = document.getElementById("block-timer");
+  const nameEl = document.getElementById("bloco-name");
+  nameEl.textContent = activity.blocoTitulo;
+
+  // Calculate remaining seconds for this activity
+  let remaining = activity.dur * 60;
+  const tick = () => {
+    if (remaining <= 0) { el.textContent = "00:00"; el.className = "time warning"; return; }
+    const m = Math.floor(remaining / 60);
+    const s = remaining % 60;
+    el.textContent = `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+    el.className = remaining <= 60 ? "time warning" : "time";
+    if (remaining === 60) showAlert("⏱ 1 MINUTO restante!");
+    if (remaining === 300) showAlert("⏱ 5 MINUTOS restantes");
+    remaining--;
+  };
+  tick();
+  blockTimerInterval = setInterval(tick, 1000);
+}
+
+function checkAlerts(a) {
+  if (a.tipo === "chamada") showAlert("📋 FAZER CHAMADA AGORA!");
+  if (a.tipo === "avaliacao") showAlert("⭐ PEDIR AVALIAÇÃO AOS ALUNOS!");
+  if (a.tipo === "breakout_prep") showAlert("📱 COMPARTILHAR QR CODES NO CHAT DO TEAMS!");
+  if (a.tipo === "breakout") showAlert("👥 CRIAR BREAKOUT ROOMS NO TEAMS (4 grupos, 8 min)");
+  if (a.tipo === "intervalo") showAlert("☕ INTERVALO — 10 minutos. Faça chamada ao retornar!");
+}
+
+function showAlert(msg) {
+  const el = document.getElementById("alert-box");
+  el.textContent = msg;
+  el.classList.add("show");
+  playAlert();
+  setTimeout(() => el.classList.remove("show"), 15000);
+}
+
+function playAlert() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.value = 800; gain.gain.value = 0.3;
+    osc.start(); osc.stop(ctx.currentTime + 0.2);
+    setTimeout(() => { const o2 = ctx.createOscillator(); o2.connect(gain); o2.frequency.value = 1000; o2.start(); o2.stop(ctx.currentTime + 0.15); }, 250);
+  } catch(e) {}
+}
+
+// Log
+function addLog(type, text) {
+  const now = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  logEntries.push({ time: now, type, text, ts: Date.now() });
+  const area = document.getElementById("log-area");
+  area.innerHTML += `<div class="log-entry log-${type}"><span class="log-time">${now}</span> <span class="log-text">${text}</span></div>`;
+  area.scrollTop = area.scrollHeight;
+  document.getElementById("log-count").textContent = logEntries.length;
+}
+
+function addLogFromInput() {
+  const input = document.getElementById("log-input");
+  const text = input.value.trim();
+  if (!text) return;
+  const type = text.startsWith("❓") ? "pergunta" : text.startsWith("📝") ? "obs" : "obs";
+  addLog(type, text);
+  input.value = "";
+}
+
+// Chamada
+function openChamada() { document.getElementById("chamada-modal").classList.add("show"); }
+function closeChamada() { document.getElementById("chamada-modal").classList.remove("show"); }
+function saveChamada() {
+  const list = document.getElementById("chamada-list").value.trim();
+  if (!list) return;
+  const names = list.split("\n").filter(n => n.trim());
+  addLog("chamada", `📋 Chamada: ${names.length} aluno(s) registrado(s)`);
+  names.forEach(n => addLog("chamada", `  ✓ ${n.trim()}`));
+  closeChamada();
+}
+
+// QR Codes
+function openBreakoutQR() {
+  const a = allActivities[currentActivityIdx];
+  let bloco = 1;
+  // Find the current block number for breakout
+  for (let i = currentActivityIdx; i >= 0; i--) {
+    if (allActivities[i].blocoNum > 0) { bloco = allActivities[i].blocoNum; break; }
+  }
+  window.open(`qrcodes.html?aula=${currentAula}&bloco=${bloco}`, "_blank");
+}
+
+// Export log
+function exportLog() {
+  const aula = AULA_DATA[currentAula];
+  let text = `LOG DA AULA ${currentAula}\n${aula?.titulo || ""}\nData: ${new Date().toLocaleDateString("pt-BR")}\n${"=".repeat(60)}\n\n`;
+  logEntries.forEach(e => { text += `[${e.time}] ${e.text}\n`; });
+  text += `\n${"=".repeat(60)}\nTotal de registros: ${logEntries.length}\n`;
+
+  const blob = new Blob([text], { type: "text/plain" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `log_aula${currentAula}_${new Date().toISOString().slice(0,10)}.txt`;
+  a.click();
+  addLog("sistema", "💾 Log exportado");
+}
+
+// Keyboard shortcuts
+document.addEventListener("keydown", (e) => {
+  if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+  if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); nextActivity(); }
+  if (e.key === "ArrowLeft") { e.preventDefault(); selectActivity(currentActivityIdx - 1); }
+  if (e.key === "q") openBreakoutQR();
+  if (e.key === "c") openChamada();
+  if (e.key === "e") exportLog();
+});
+
+// Init
+loadAula();
+addLog("sistema", "🚀 Dashboard iniciado. Atalhos: → Próximo | ← Anterior | Q=QR | C=Chamada | E=Exportar");
+</script>
+</body>
+</html>
