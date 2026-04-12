@@ -24,8 +24,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#e6edf
 .drift-display.drifting .drift-value{font-weight:900}
 @keyframes drift-pulse{0%,100%{border-color:#f0883e;opacity:1}50%{border-color:#f85149;opacity:.6}}
 /* Left: Timer + Roteiro */
-.left{background:#0d1117;border-right:1px solid #30363d;overflow-y:auto;padding:12px}
-.timer-box{text-align:center;padding:16px 8px;background:#161b22;border-radius:12px;margin-bottom:12px;border:1px solid #30363d}
+.left{background:#0d1117;border-right:1px solid #30363d;display:flex;flex-direction:column;overflow:hidden}
+.timer-box{text-align:center;padding:16px 8px;background:#161b22;border-radius:12px;margin:12px 12px 8px;border:1px solid #30363d;flex-shrink:0}
+.activity-scroll{flex:1;overflow-y:auto;padding:0 12px 12px}
 .timer-box .label{font-size:11px;color:#8b949e;text-transform:uppercase;letter-spacing:1px}
 .timer-box .time{font-size:48px;font-weight:700;font-variant-numeric:tabular-nums;color:#f0883e}
 .timer-box .time.warning{color:#f85149;animation:pulse 1s infinite}
@@ -90,7 +91,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#e6edf
 .modal .modal-btns button{flex:1;padding:10px;border-radius:8px;border:none;font-size:14px;cursor:pointer;font-weight:600}
 .modal .modal-btns .save{background:#238636;color:#fff}
 .modal .modal-btns .cancel{background:#21262d;color:#e6edf3;border:1px solid #30363d}
-/* Audio alert */
+/* Audio alert toggle */
+.btn-alert{position:relative}
+.btn-alert.muted{background:#21262d!important;border-color:#30363d!important;color:#8b949e!important}
+.btn-alert.flash{animation:btn-flash .5s ease-in-out 6}
+@keyframes btn-flash{0%,100%{background:#da3633;border-color:#f85149;color:#fff}50%{background:#f0883e;border-color:#f0883e;color:#0d1117}}
 .hidden{display:none}
 </style>
 </head>
@@ -118,11 +123,13 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#e6edf
 
 <div class="left">
   <div class="timer-box">
-    <div class="label">Tempo restante do bloco</div>
+    <div class="label">Tempo restante da atividade</div>
     <div class="time" id="block-timer">--:--</div>
     <div class="bloco-name" id="bloco-name">—</div>
   </div>
-  <ul class="activity-list" id="activity-list"></ul>
+  <div class="activity-scroll">
+    <ul class="activity-list" id="activity-list"></ul>
+  </div>
 </div>
 
 <div class="center">
@@ -138,7 +145,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#e6edf
     <button onclick="addLog('obs','📝 ')">📝 Observação</button>
     <button onclick="addLog('pergunta','❓ Pergunta: ')">❓ Pergunta</button>
     <button onclick="addLog('sistema','✅ Atividade concluída')">✅ Concluir</button>
-    <button onclick="playAlert()">🔔 Alerta sonoro</button>
+    <button class="btn-alert" id="btn-alert-toggle" onclick="toggleAlert()">🔔 Som: ON</button>
   </div>
 </div>
 
@@ -172,6 +179,7 @@ let allActivities = [];
 let blockTimerInterval = null;
 let logEntries = [];
 let timeDriftMinutes = 0; // positive = ahead (adiantado), negative = behind (atrasado)
+let alertSoundEnabled = true;
 
 // Clock
 setInterval(() => {
@@ -294,20 +302,43 @@ function showAlert(msg) {
   const el = document.getElementById("alert-box");
   el.textContent = msg;
   el.classList.add("show");
-  playAlert();
+  triggerAlert();
   setTimeout(() => el.classList.remove("show"), 15000);
 }
 
-function playAlert() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.frequency.value = 800; gain.gain.value = 0.3;
-    osc.start(); osc.stop(ctx.currentTime + 0.2);
-    setTimeout(() => { const o2 = ctx.createOscillator(); o2.connect(gain); o2.frequency.value = 1000; o2.start(); o2.stop(ctx.currentTime + 0.15); }, 250);
-  } catch(e) {}
+function triggerAlert() {
+  const btn = document.getElementById("btn-alert-toggle");
+  if (alertSoundEnabled) {
+    // Play sound
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = 800; gain.gain.value = 0.3;
+      osc.start(); osc.stop(ctx.currentTime + 0.2);
+      setTimeout(() => { const o2 = ctx.createOscillator(); o2.connect(gain); o2.frequency.value = 1000; o2.start(); o2.stop(ctx.currentTime + 0.15); }, 250);
+    } catch(e) {}
+  } else {
+    // Silent mode: flash the button for 30 seconds
+    btn.classList.remove("flash");
+    void btn.offsetWidth; // force reflow
+    btn.classList.add("flash");
+    setTimeout(() => btn.classList.remove("flash"), 30000);
+  }
+}
+
+function toggleAlert() {
+  alertSoundEnabled = !alertSoundEnabled;
+  const btn = document.getElementById("btn-alert-toggle");
+  if (alertSoundEnabled) {
+    btn.textContent = "🔔 Som: ON";
+    btn.classList.remove("muted");
+  } else {
+    btn.textContent = "🔕 Som: OFF";
+    btn.classList.add("muted");
+  }
+  addLog("sistema", alertSoundEnabled ? "🔔 Alerta sonoro LIGADO" : "🔕 Alerta silencioso (botão pisca)");
 }
 
 // Log
