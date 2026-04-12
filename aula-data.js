@@ -1,3 +1,4 @@
+// v2 - slides corrigidos do PPTX real - 2026-04-12 12:58
 // Roteiro das 4 aulas — slides mapeados do PPTX real
 const AULA_DATA = {
   1: {
