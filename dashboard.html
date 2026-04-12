@@ -114,6 +114,13 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#e6edf
 /* Professor embed na area central */
 .professor-embed{border:1px solid #30363d;border-radius:12px;overflow:hidden;flex:1;min-height:300px}
 .professor-embed iframe{width:100%;height:100%;border:none;border-radius:12px}
+.btn-pause{background:#f0883e!important;border-color:#f0883e!important}
+.btn-running{background:#238636!important;border-color:#238636!important}
+.paused-overlay{position:fixed;top:50px;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:50;display:none;justify-content:center;align-items:center}
+.paused-overlay.show{display:flex}
+.paused-msg{background:#161b22;border:2px solid #f0883e;border-radius:16px;padding:32px 48px;text-align:center}
+.paused-msg h2{color:#f0883e;font-size:24px;margin-bottom:8px}
+.paused-msg p{color:#8b949e}
 .hidden{display:none}
 </style>
 </head>
@@ -126,6 +133,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#e6edf
     <option value="3">Aula 3</option><option value="4">Aula 4</option>
   </select>
   <span id="aula-titulo" style="color:#8b949e;font-size:12px"></span>
+  <button class="btn btn-green" id="btn-start" onclick="toggleStart()">⏸ Iniciar Aula</button>
   <button class="btn btn-green" onclick="nextActivity()">▶ Próximo</button>
   <button class="btn" onclick="openBreakoutQR()">📱 QR Codes</button>
   <button class="btn" onclick="openChamada()">📋 Chamada</button>
@@ -167,6 +175,14 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#e6edf
   </div>
   <div class="professor-embed">
     <iframe src="professor.html" id="professor-iframe"></iframe>
+  </div>
+</div>
+
+<!-- Pausa overlay -->
+<div class="paused-overlay" id="paused-overlay">
+  <div class="paused-msg">
+    <h2>⏸ AULA PAUSADA</h2>
+    <p>Clique "▶ Retomar" na barra superior para continuar</p>
   </div>
 </div>
 
@@ -214,6 +230,8 @@ let blockTimerInterval = null;
 let logEntries = [];
 let timeDriftMinutes = 0; // positive = ahead (adiantado), negative = behind (atrasado)
 let alertSoundEnabled = true;
+let isRunning = false;
+let isPaused = false;
 
 // Clock
 setInterval(() => {
@@ -292,6 +310,7 @@ function selectActivity(idx) {
   // Scroll into view
   const items = document.querySelectorAll(".activity-item");
   if (items[idx]) items[idx].scrollIntoView({ behavior: "smooth", block: "center" });
+  saveState();
 }
 
 function nextActivity() {
@@ -420,12 +439,8 @@ function openChat(question) {
   el.classList.add("show");
   document.getElementById("chat-input").focus();
   
-  // Add a helper hint
-  const hint = document.createElement("div");
-  hint.className = "chat-msg ai";
-  hint.innerHTML = `<div class="msg-label">💡 Dica</div>Use o GenClaw webchat para buscar a resposta. Cole aqui a resposta ou escreva diretamente para registrar no log.`;
-  msgs.appendChild(hint);
-  msgs.scrollTop = msgs.scrollHeight;
+  // Auto-ask AI for the answer
+  askAI(question, msgs);
 }
 
 function sendChatMsg() {
@@ -437,12 +452,37 @@ function sendChatMsg() {
   chatMessages.push({ role: "professor", text });
   
   const div = document.createElement("div");
-  div.className = "chat-msg ai";
-  div.innerHTML = `<div class="msg-label">🎓 Professor</div>${escapeHtml(text)}`;
+  div.className = "chat-msg user";
+  div.innerHTML = `<div class="msg-label">🎓 Você</div>${escapeHtml(text)}`;
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
   input.value = "";
-  input.focus();
+  
+  // Call AI for response
+  askAI(text, msgs);
+}
+
+async function askAI(question, msgsEl) {
+  const loading = document.createElement("div");
+  loading.className = "chat-msg ai";
+  loading.innerHTML = `<div class="msg-label">🤖 IA</div><em>Pensando...</em>`;
+  msgsEl.appendChild(loading);
+  msgsEl.scrollTop = msgsEl.scrollHeight;
+
+  try {
+    const ctx = allActivities[currentActivityIdx]?.desc || "";
+    const r = await fetch("/api/ai-chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question, context: ctx })
+    });
+    const data = await r.json();
+    loading.innerHTML = `<div class="msg-label">🤖 IA (${data.source || ""})</div>${escapeHtml(data.answer)}`;
+    chatMessages.push({ role: "ia", text: data.answer });
+  } catch(e) {
+    loading.innerHTML = `<div class="msg-label">🤖 IA</div><em>Erro de conexão. Tente novamente.</em>`;
+  }
+  msgsEl.scrollTop = msgsEl.scrollHeight;
 }
 
 function closeChat() {
@@ -453,11 +493,9 @@ function closeChat() {
   if (chatMessages.length > 0) {
     addLog("pergunta", `💬 Chat sobre: "${currentQuestion}"`);
     chatMessages.forEach(m => {
-      if (m.role === "aluno") {
-        addLog("pergunta", `  ❓ Aluno: ${m.text}`);
-      } else {
-        addLog("obs", `  🎓 Prof: ${m.text}`);
-      }
+      if (m.role === "aluno") addLog("pergunta", `  ❓ Aluno: ${m.text}`);
+      else if (m.role === "ia") addLog("obs", `  🤖 IA: ${m.text}`);
+      else addLog("obs", `  🎓 Prof: ${m.text}`);
     });
     addLog("sistema", `💬 Chat encerrado (${chatMessages.length} mensagens)`);
   }
@@ -561,6 +599,119 @@ function formatDrift(min) {
   return `${sign}${min} min`;
 }
 
+// ===== START / PAUSE =====
+function toggleStart() {
+  const btn = document.getElementById("btn-start");
+  const overlay = document.getElementById("paused-overlay");
+  
+  if (!isRunning) {
+    // Start
+    isRunning = true;
+    isPaused = false;
+    btn.textContent = "⏸ Pausar";
+    btn.className = "btn btn-pause";
+    overlay.classList.remove("show");
+    addLog("sistema", "▶️ AULA INICIADA");
+    startBlockTimer(allActivities[currentActivityIdx]);
+    saveState();
+  } else if (!isPaused) {
+    // Pause
+    isPaused = true;
+    btn.textContent = "▶ Retomar";
+    btn.className = "btn btn-running";
+    overlay.classList.add("show");
+    if (blockTimerInterval) clearInterval(blockTimerInterval);
+    addLog("sistema", "⏸ AULA PAUSADA");
+    saveState();
+  } else {
+    // Resume
+    isPaused = false;
+    btn.textContent = "⏸ Pausar";
+    btn.className = "btn btn-pause";
+    overlay.classList.remove("show");
+    addLog("sistema", "▶️ AULA RETOMADA");
+    startBlockTimer(allActivities[currentActivityIdx]);
+    saveState();
+  }
+}
+
+// ===== PERSISTÊNCIA — salvar/restaurar estado =====
+function saveState() {
+  const state = {
+    aula: currentAula,
+    activityIdx: currentActivityIdx,
+    drift: timeDriftMinutes,
+    running: isRunning,
+    paused: isPaused,
+    alertSound: alertSoundEnabled,
+    log: logEntries,
+    ts: Date.now()
+  };
+  try { localStorage.setItem("dashboard_state", JSON.stringify(state)); } catch(e) {}
+}
+
+function restoreState() {
+  try {
+    const raw = localStorage.getItem("dashboard_state");
+    if (!raw) return false;
+    const state = JSON.parse(raw);
+    // Only restore if less than 6 hours old
+    if (Date.now() - state.ts > 6 * 60 * 60 * 1000) { localStorage.removeItem("dashboard_state"); return false; }
+    
+    currentAula = state.aula || 1;
+    document.getElementById("sel-aula").value = currentAula;
+    timeDriftMinutes = state.drift || 0;
+    alertSoundEnabled = state.alertSound !== false;
+    
+    loadAula();
+    
+    // Restore activity position
+    if (state.activityIdx > 0 && state.activityIdx < allActivities.length) {
+      selectActivity(state.activityIdx);
+    }
+    
+    // Restore log
+    if (state.log && state.log.length > 0) {
+      const area = document.getElementById("log-area");
+      state.log.forEach(e => {
+        logEntries.push(e);
+        area.innerHTML += `<div class="log-entry log-${e.type}"><span class="log-time">${e.time}</span> <span class="log-text">${e.text}</span></div>`;
+      });
+      document.getElementById("log-count").textContent = logEntries.length;
+      area.scrollTop = area.scrollHeight;
+    }
+    
+    // Restore running state
+    if (state.running) {
+      isRunning = true;
+      isPaused = state.paused;
+      const btn = document.getElementById("btn-start");
+      if (isPaused) {
+        btn.textContent = "▶ Retomar";
+        btn.className = "btn btn-running";
+        document.getElementById("paused-overlay").classList.add("show");
+      } else {
+        btn.textContent = "⏸ Pausar";
+        btn.className = "btn btn-pause";
+        startBlockTimer(allActivities[currentActivityIdx]);
+      }
+    }
+    
+    updateDriftDisplay();
+    if (!alertSoundEnabled) {
+      const abtn = document.getElementById("btn-alert-toggle");
+      abtn.textContent = "🔕 Som: OFF";
+      abtn.classList.add("muted");
+    }
+    
+    addLog("sistema", "🔄 Estado restaurado — continuando de onde parou");
+    return true;
+  } catch(e) { return false; }
+}
+
+// Auto-save every 30 seconds
+setInterval(saveState, 30000);
+
 // Keyboard shortcuts
 document.addEventListener("keydown", (e) => {
   if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
@@ -571,9 +722,11 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "e") exportLog();
 });
 
-// Init
-loadAula();
-addLog("sistema", "🚀 Dashboard iniciado. Atalhos: → Próximo | ← Anterior | Q=QR | C=Chamada | E=Exportar");
+// Init — try restore, otherwise fresh start
+if (!restoreState()) {
+  loadAula();
+  addLog("sistema", "🚀 Dashboard iniciado. Atalhos: → Próximo | ← Anterior | Q=QR | C=Chamada | E=Exportar | Espaço=Iniciar/Pausar");
+}
 </script>
 </body>
 </html>
