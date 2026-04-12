@@ -97,39 +97,7 @@ function generateLocalAnswer(q, ctx) {
   return `Sobre "${q}": Este tema não faz parte diretamente do conteúdo coberto até a Aula ${aulaNum}. Pode ser um tema complementar — consulte o Guia do Professor ou os slides da aula correspondente.`;
 }
 
-// Legacy fallback (kept for compatibility but replaced by ai-knowledge.js)
-const _legacyAnswers = [
-    { keys: ["ooda","observar","orientar","decidir","agir"], a: "OODA Loop (John Boyd): Observar→Orientar→Decidir→Agir. Ciclo de decisão rápida. Quanto mais rápido o ciclo, maior a vantagem competitiva. Use para decisões táticas em ambientes incertos." },
-    { keys: ["3m","algoritmo","minimo esforço","melhor desempenho"], a: "Algoritmo 3M: Melhor Desempenho + Máxima Segurança + Mínimo Esforço. 'Mínimo Esforço' não é preguiça — é eficiência máxima: eliminar desperdícios e focar no essencial." },
-    { keys: ["sbi","feedback","situação","comportamento","impacto"], a: "Modelo SBI: Situação (quando/onde) + Comportamento (o que observou) + Impacto (qual o efeito). Ex: 'Na reunião de hoje (S), você apresentou dados claros (B), isso convenceu o board (I).' Sempre foque no comportamento, não na pessoa." },
-    { keys: ["aristoteles","aristóteles","google","segurança psicológica","5 pilares"], a: "Projeto Aristóteles (Google): 5 pilares em ordem: 1.Segurança Psicológica (#1!), 2.Confiabilidade, 3.Estrutura e Clareza, 4.Significado, 5.Impacto. Não importa QUEM está na equipe, mas COMO trabalham juntos." },
-    { keys: ["scarf","status","certainty","autonomy","relatedness","fairness"], a: "Modelo SCARF (David Rock): Status, Certainty, Autonomy, Relatedness, Fairness. Quando qualquer domínio é ameaçado → modo fight/flight. Quando recompensado → engajamento." },
-    { keys: ["growth mindset","fixed mindset","dweck","nadella","learn-it-all"], a: "Growth Mindset (Dweck): Habilidades podem ser desenvolvidas com esforço. Nadella transformou Microsoft de 'know-it-all' para 'learn-it-all'. Resultado: $300B→$3T em valor." },
-    { keys: ["grit","duckworth","perseverança","paixão"], a: "GRIT (Duckworth): Paixão + Perseverança a longo prazo. Talento×Esforço=Habilidade, Habilidade×Esforço=Realização. Esforço conta 2x!" },
-    { keys: ["antifragil","antifrágil","taleb"], a: "Antifragilidade (Taleb): Frágil=quebra com estresse, Resiliente=resiste, Antifrágil=fica MAIS FORTE. Como músculo: micro-lesões→crescimento." },
-    { keys: ["schein","iceberg","cultura","pressupostos"], a: "Iceberg de Schein: 3 níveis — Artefatos Visíveis (10%), Valores Declarados (20%), Pressupostos Básicos (70%). Pressupostos são crenças tácitas que realmente guiam decisões." },
-    { keys: ["cvf","clã","adhocracia","hierarquia","mercado","competing values"], a: "CVF (Quinn): 4 culturas — Clã (colaboração), Adhocracia (inovação), Hierarquia (controle), Mercado (competição). Nenhuma empresa é 100% um tipo." },
-    { keys: ["netflix","keeper test","freedom","responsibility"], a: "Netflix: Freedom & Responsibility. Keeper Test: 'Se pedisse para sair, eu lutaria para mantê-lo?' Contexto sobre controle. Feedback radical e transparência." },
-    { keys: ["spotify","squad","tribe","chapter","guild"], a: "Spotify Model: Squads (6-12, autônomos), Tribes (agrupamento), Chapters (especialistas cross-squad), Guilds (comunidades voluntárias). Alinhamento com autonomia." },
-    { keys: ["zappos","holocracia","onboarding"], a: "Zappos: Holocracia (sem hierarquia), Onboarding 4 semanas, Teste do $2.000 (quem aceita não tem fit cultural)." },
-    { keys: ["kotter","8 passos","mudança","urgência"], a: "Kotter 8 Passos: 1.Urgência, 2.Coalizão, 3.Visão, 4.Comunicar, 5.Empoderar, 6.Vitórias curtas, 7.Consolidar, 8.Ancorar na cultura. 75% da liderança deve estar convencida antes de começar." },
-    { keys: ["adkar","awareness","desire","knowledge","ability","reinforcement"], a: "ADKAR (Prosci): Awareness→Desire→Knowledge→Ability→Reinforcement. Complementa Kotter: Kotter=organizacional, ADKAR=individual." },
-    { keys: ["okr","objective","key result","cfr"], a: "OKRs: Objective (qualitativo, inspirador) + Key Results (quantitativos, mensuráveis). CFRs: Conversas, Feedback, Reconhecimento. NSM: North Star Metric." },
-    { keys: ["radical candor","kim scott","ruinous empathy","empatia destrutiva"], a: "Radical Candor (Kim Scott): Cuidar Pessoalmente + Desafiar Diretamente. 4 quadrantes: Radical Candor (ideal), Ruinous Empathy (mais comum!), Obnoxious Aggression, Manipulative Insincerity." },
-    { keys: ["eisenhower","urgente","importante","priorização","priorizar"], a: "Matriz de Eisenhower: Urgente+Importante=Fazer agora. Não Urgente+Importante=AGENDAR (viva aqui!). Urgente+Não Importante=Delegar. Não Urgente+Não Importante=Eliminar." },
-    { keys: ["tuckman","forming","storming","norming","performing"], a: "Tuckman: Forming→Storming→Norming→Performing→Adjourning. Muitas equipes ficam presas no Storming. O líder acelera para Performing." },
-    { keys: ["design thinking","empatia","ideação","prototipagem"], a: "Design Thinking: Empatia→Definição→Ideação→Prototipagem→Teste. Case Airbnb: fotos profissionais salvaram a empresa. A solução foi empatia, não código." },
-    { keys: ["lean startup","mvp","build-measure-learn","pivotar"], a: "Lean Startup (Ries): Build-Measure-Learn. MVP=menor versão que testa hipótese. Pivotar=mudar direção com base em dados, não medo." },
-    { keys: ["pdi","plano de desenvolvimento"], a: "PDI: Competência-alvo + Meta SMART + Ações concretas + Indicadores + Prazo. Revisão mensal. 70% experiência, 20% social, 10% formal." },
-    { keys: ["covey","7 hábitos","habitos"], a: "7 Hábitos de Covey: 1.Proatividade, 2.Começar com o fim, 3.Primeiro o mais importante, 4.Ganha-ganha, 5.Compreender primeiro, 6.Sinergizar, 7.Afiar a serra." },
-    { keys: ["cialdini","influência","reciprocidade","prova social"], a: "6 Princípios de Cialdini: 1.Reciprocidade (dê primeiro), 2.Compromisso, 3.Prova Social, 4.Afinidade, 5.Autoridade, 6.Escassez. Influência ≠ Manipulação." },
-    { keys: ["30-60-90","plano de ação"], a: "Plano 30-60-90: 30 dias=Aprender (diagnóstico, stakeholders, 1:1s), 60 dias=Contribuir (OKRs, quick wins, rituais), 90 dias=Liderar (escalar, PDIs, legado)." },
-    { keys: ["people analytics","turnover","engajamento"], a: "People Analytics: Dados para decisão de pessoas. Pode prever turnover com 85%+ de acurácia. Métricas: eNPS, turnover, PDI ativo, frequência de 1:1s, absenteísmo." },
-    { keys: ["sbar","situation","background","assessment","recommendation"], a: "SBAR: Situation (o que acontece), Background (contexto), Assessment (análise), Recommendation (proposta). Usado em hospitais e negócios para comunicação clara." },
-  ];
-  // Legacy answers not used — see generateLocalAnswer above
-  return `Sobre "${q}": Consulte o material da aula.`;
-}
+// Legacy answers removed — using ai-knowledge.js
 
 const server = http.createServer((req, res) => {
   try {
